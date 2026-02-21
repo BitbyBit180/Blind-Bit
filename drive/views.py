@@ -208,6 +208,22 @@ def parse_query(query):
     return required, optional, excluded
 
 
+def _query_terms_for_preview(query: str):
+    """Extract searchable terms from query for preview snippet selection."""
+    terms = []
+    for raw in query.split():
+        token = raw.strip()
+        if not token:
+            continue
+        if token.startswith('+') or token.startswith('-'):
+            token = token[1:]
+        token = token.strip('"').replace('*', '')
+        token = re.sub(r'[^\w-]', '', token, flags=re.UNICODE)
+        if len(token) >= 2:
+            terms.append(token.lower())
+    return list(dict.fromkeys(terms))
+
+
 @login_required
 @require_POST
 def search_api(request):
