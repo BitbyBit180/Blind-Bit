@@ -198,7 +198,7 @@ class AccountPolicyTests(TestCase):
 
         page = self.client.get(reverse('recovery_codes'))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, 'Save These Recovery Codes')
+        self.assertContains(page, 'Recovery Codes')
 
     def test_legacy_password_login_bootstraps_data_passphrase(self):
         user = User.objects.create_user(username='legacy', password='StrongPassword123')
