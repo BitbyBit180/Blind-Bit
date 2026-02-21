@@ -123,14 +123,17 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+GOOGLE_OAUTH_AVAILABLE = False
+GOOGLE_OAUTH_CONFIGURED = bool(config('GOOGLE_CLIENT_ID', default='').strip())
 GOOGLE_OAUTH_ENABLED = False
 try:
     import requests  # noqa: F401
 except Exception:
-    GOOGLE_OAUTH_ENABLED = False
+    GOOGLE_OAUTH_AVAILABLE = False
 else:
     INSTALLED_APPS.append('allauth.socialaccount.providers.google')
-    GOOGLE_OAUTH_ENABLED = bool(config('GOOGLE_CLIENT_ID', default='').strip())
+    GOOGLE_OAUTH_AVAILABLE = True
+    GOOGLE_OAUTH_ENABLED = GOOGLE_OAUTH_CONFIGURED
 
 # --- SSE storage directory ---
 SSE_STORAGE_DIR = BASE_DIR / 'storage'
