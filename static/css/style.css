@@ -598,80 +598,6 @@ h3 {
     font-size: 14px;
     letter-spacing: 3px;
     margin: 8px 0;
-    text-align: center;
-    margin-top: 20px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
-}
-
-.auth-footer a {
-    color: rgba(255, 255, 255, 0.85);
-    text-decoration: underline;
-}
-
-/* Auth btn overrides (on dark hero) */
-.auth-card .btn-primary {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: transparent;
-    color: var(--text);
-}
-
-.auth-card .btn-primary:hover {
-    background: #fff;
-    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.20);
-}
-
-.auth-card .btn-ghost {
-    border-color: rgba(255, 255, 255, 0.25);
-    color: rgba(255, 255, 255, 0.80);
-}
-
-.auth-card .btn-ghost:hover {
-    background: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.40);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   2FA SETUP (inside app layout — light theme)
-══════════════════════════════════════════════════════════════ */
-.twofa-setup {
-    text-align: center;
-}
-
-.step-label {
-    font-size: 14px;
-    color: var(--text-dim);
-    margin-bottom: 12px;
-    font-weight: 500;
-}
-
-.qr-wrapper {
-    display: inline-block;
-    background: #fff;
-    padding: 16px;
-    border-radius: var(--radius);
-    margin: 12px 0;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-sm);
-}
-
-.qr-image {
-    width: 200px;
-    height: 200px;
-}
-
-.secret-display {
-    margin: 16px 0;
-}
-
-.secret-code {
-    font-family: 'JetBrains Mono', monospace;
-    background: var(--surface2);
-    padding: 10px 18px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    letter-spacing: 3px;
-    margin: 8px 0;
     border: 1px solid var(--border);
     display: inline-block;
     color: var(--text);
@@ -791,7 +717,7 @@ h3 {
 }
 
 .card-title {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Fraunces', serif;
     font-size: 17px;
     font-weight: 400;
     margin-bottom: 18px;
@@ -854,7 +780,7 @@ h3 {
 }
 
 .stat-value {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Fraunces', serif;
     font-size: 32px;
     font-weight: 400;
     color: var(--text);
@@ -1130,7 +1056,7 @@ h3 {
 }
 
 .section-title {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Fraunces', serif;
     font-size: 17px;
     font-weight: 400;
     margin: 26px 0 14px;
@@ -1440,7 +1366,7 @@ h3 {
 }
 
 .empty-title {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Fraunces', serif;
     font-size: 20px;
     color: var(--text);
     margin-bottom: 8px;
