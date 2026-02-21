@@ -10,6 +10,12 @@ function getCSRF() {
 async function uploadFile(input) {
     const file = input.files[0];
     if (!file) return;
+    const wantsSecretKeyword = confirm('Do you want to add a custom secret keyword for this file?');
+    let manualKeyword = '';
+    if (wantsSecretKeyword) {
+        const val = prompt('Enter a secret keyword (or multiple words). This will be stored for search even if not present in the file:', '');
+        manualKeyword = (val || '').trim();
+    }
 
     const status = document.getElementById('upload-status');
     const result = document.getElementById('upload-result');
@@ -19,6 +25,9 @@ async function uploadFile(input) {
 
     const fd = new FormData();
     fd.append('file', file);
+    if (manualKeyword) {
+        fd.append('manual_keyword', manualKeyword);
+    }
 
     try {
         const res = await fetch('/upload/', {
@@ -40,6 +49,7 @@ async function uploadFile(input) {
                 <div><strong>File:</strong> ${d.filename}</div>
                 <div><strong>File ID:</strong> <code>${d.file_id.substring(0, 24)}...</code></div>
                 <div><strong>Keywords:</strong> ${d.keywords}</div>
+                ${d.secret_keywords_added && d.secret_keywords_added.length ? `<div><strong>Secret keyword(s):</strong> ${d.secret_keywords_added.join(', ')}</div>` : ''}
                 <div><strong>Tokens:</strong> K=${d.tokens.K}, N=${d.tokens.N}, B=${d.tokens.B} (total: ${d.tokens.total})</div>
                 <div><strong>Encrypt time:</strong> ${d.encrypt_time}s</div>
                 <div><strong>Index time:</strong> ${d.index_time}s</div>
