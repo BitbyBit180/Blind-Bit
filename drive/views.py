@@ -434,7 +434,7 @@ def search_api(request):
                             os.unlink(tmp_pdf_path)
                 else:
                     full_text = plain.decode('utf-8', errors='replace')
-                preview = full_text[:400]
+                preview = _preview_around_match(full_text, preview_terms, width=400)
             except:
                 full_text = ''
                 preview = '[decrypt error]'
