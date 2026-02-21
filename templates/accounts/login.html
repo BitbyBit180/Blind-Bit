@@ -10,12 +10,8 @@
         <p class="auth-subtitle">Sign in to your encrypted workspace</p>
     </div>
 
-    <div class="auth-steps">
-        <div class="auth-step active">1. Username + Password</div>
-        <div class="auth-step {% if needs_2fa %}active{% endif %}">2. 2FA or Recovery Code</div>
-    </div>
     <p class="auth-flow-note">
-        2FA is checked once at login. After that, your session stays verified until logout or expiry.
+        If you have 2FA enabled, you will be prompted for your code on the next step.
     </p>
 
     <form method="post" class="auth-form">
@@ -29,58 +25,6 @@
             <label for="password">Password</label>
             <input type="password" name="password" id="password" required placeholder="Enter password">
         </div>
-        <div class="form-group" id="totp-group" {% if not needs_2fa %}style="display:none" {% endif %}>
-            <label for="totp_code">2FA Code</label>
-            <input type="text" name="totp_code" id="totp_code" maxlength="6" placeholder="6-digit code"
-                autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}">
-            <span class="form-hint">Enter the current code from your authenticator app.</span>
-        </div>
-        <div class="form-group" id="recovery-group" {% if not needs_2fa %}style="display:none" {% endif %}>
-            <label for="recovery_code">Recovery Code</label>
-            <input type="text" name="recovery_code" id="recovery_code" maxlength="9" placeholder="ABCD-1234"
-                autocomplete="one-time-code" pattern="[A-Za-z0-9]{4}-[A-Za-z0-9]{4}">
-            <span class="form-hint">Use one of your saved one-time recovery codes if you lost your authenticator app.</span>
-        </div>
-        <div class="form-group" id="remember-device-group" {% if not needs_2fa %}style="display:none" {% endif %}>
-            <label for="remember_device">
-                <input type="checkbox" name="remember_device" id="remember_device">
-                Remember this device for 30 days
-            </label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
-        <div class="form-toggle" id="show-2fa-toggle" {% if needs_2fa %}style="display:none" {% endif %}>
-            <button type="button" class="btn btn-ghost btn-full" id="show-2fa-btn">
-                My account uses 2FA, enter code
-            </button>
-        </div>
+        <button type="submit" class="btn btn-primary btn-full">Continue</button>
     </form>
-
-    <div class="auth-footer">
-        <p>Don't have an account? <a href="{% url 'register' %}">Register</a></p>
-    </div>
-</div>
-
-<script>
-    (function () {
-        const showBtn = document.getElementById('show-2fa-btn');
-        const group = document.getElementById('totp-group');
-        const wrap = document.getElementById('show-2fa-toggle');
-        const otp = document.getElementById('totp_code');
-        const recoveryGroup = document.getElementById('recovery-group');
-        const rememberGroup = document.getElementById('remember-device-group');
-        if (showBtn && group && wrap && otp) {
-            showBtn.addEventListener('click', function () {
-                group.style.display = 'block';
-                if (recoveryGroup) {
-                    recoveryGroup.style.display = 'block';
-                }
-                if (rememberGroup) {
-                    rememberGroup.style.display = 'block';
-                }
-                wrap.style.display = 'none';
-                otp.focus();
-            });
-        }
-    })();
-</script>
 {% endblock %}

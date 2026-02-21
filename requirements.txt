@@ -1,2 +1,13 @@
-pdfminer.six>=20221105
-cryptography>=41.0.0
+asgiref==3.11.1
+cffi==2.0.0
+charset-normalizer==3.4.4
+cryptography==46.0.5
+Django==6.0.2
+django-ratelimit==4.1.0
+pdfminer.six==20260107
+pillow==12.1.1
+pycparser==3.0
+pyotp==2.9.0
+python-decouple==3.8
+qrcode==8.2
+sqlparse==0.5.5

@@ -151,6 +151,43 @@ def register_view(request):
         salt_bytes = bytes.fromhex(profile.salt)
         mk = derive_master_key(password, secret, salt_bytes)
         request.session['_mk'] = base64.b64encode(mk).decode()
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
+
+        if not username or not password:
+            messages.error(request, 'Username and password are required.')
+            return render(request, 'accounts/register.html')
+        if password != password2:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'accounts/register.html')
+        
+        # Validators in settings.py handle length/complexity, but we catch basic length here UI-side too
+        if len(password) < 10:
+            messages.error(request, 'Password must be at least 10 characters.')
+            return render(request, 'accounts/register.html')
+            
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already taken.')
+            return render(request, 'accounts/register.html')
+
+        user = User.objects.create_user(username=username, email=email, password=password)
+        profile = UserProfile.objects.create(user=user)
+        # Generate TOTP secret immediately
+        secret = profile.generate_totp_secret()
+        
+        login(request, user)
+        
+        # Derive master key and store in session (NOT password)
+        # Note: At registration, we have password and secret.
+        # Salt is already in profile.salt (auto-generated on save)
+        salt_bytes = bytes.fromhex(profile.salt)
+        mk = derive_master_key(password, secret, salt_bytes)
+        request.session['_mk'] = base64.b64encode(mk).decode()
         
         return redirect('setup_2fa')
 
@@ -161,21 +198,16 @@ def register_view(request):
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
+    
     if request.method == 'POST':
-        # Check rate limit manually if block=False, but block=True handles 403.
-        # We can also check was_limited getattr if needed.
-        
         username = request.POST.get('username', '')
         password = request.POST.get('password', '')
-        totp_code = request.POST.get('totp_code', '')
-        recovery_code = request.POST.get('recovery_code', '').strip().upper()
-        remember_device = request.POST.get('remember_device') == 'on'
         ip = _client_ip(request)
         user_key = username.lower().strip()
 
         if _is_locked('pwd_user', user_key) or _is_locked('pwd_ip', ip):
             messages.error(request, 'Too many login attempts. Try again in 15 minutes.')
-            return render(request, 'accounts/login.html', {'needs_2fa': True, 'username': username})
+            return render(request, 'accounts/login.html', {'username': username})
 
         user = authenticate(request, username=username, password=password)
         if user is None:
@@ -183,51 +215,23 @@ def login_view(request):
             _register_failure('pwd_ip', ip, MAX_PASSWORD_FAILS_IP)
             messages.error(request, 'Invalid username or password.')
             return render(request, 'accounts/login.html')
+            
         _clear_failures('pwd_user', user_key)
         _clear_failures('pwd_ip', ip)
 
         profile = UserProfile.objects.get_or_create(user=user)[0]
         requires_otp = profile.is_2fa_enabled and not _has_valid_trusted_device(request, user, profile)
-        used_recovery_code = False
 
         if requires_otp:
-            otp_user_key = str(user.id)
-            if _is_locked('otp_user', otp_user_key) or _is_locked('otp_ip', ip):
-                messages.error(request, 'Too many 2FA attempts. Try again in 15 minutes.')
-                return render(request, 'accounts/login.html', {'needs_2fa': True, 'username': username})
+            # Store necessary info in session to complete login after 2FA
+            request.session['pre_2fa_uid'] = user.id
+            request.session['pre_2fa_password'] = password  # Needed for master key derivation
+            return redirect('verify_2fa')
 
-            if not totp_code and not recovery_code:
-                _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
-                _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
-                messages.error(request, 'Enter either a 2FA code or a recovery code.')
-                return render(request, 'accounts/login.html', {'needs_2fa': True, 'username': username})
-
-            if totp_code and not profile.verify_totp(totp_code):
-                _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
-                _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
-                messages.error(request, 'Invalid 2FA code.')
-                return render(request, 'accounts/login.html', {'needs_2fa': True, 'username': username})
-
-            if (not totp_code) and recovery_code:
-                if not profile.verify_and_consume_recovery_code(recovery_code):
-                    _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
-                    _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
-                    messages.error(request, 'Invalid recovery code.')
-                    return render(request, 'accounts/login.html', {'needs_2fa': True, 'username': username})
-                used_recovery_code = True
-                request.session['_needs_authenticator_reenroll'] = True
-                messages.warning(
-                    request,
-                    'Recovery code accepted. Reconnect your authenticator app now.',
-                )
-
-            _clear_failures('otp_user', otp_user_key)
-            _clear_failures('otp_ip', ip)
-
+        # No 2FA required (either not enabled, or trusted device)
         login(request, user)
         
         # Derive master key and store in session
-        # We need the decrypted TOTP secret for derivation
         secret = profile.get_totp_secret()
         salt_bytes = bytes.fromhex(profile.salt)
         mk = derive_master_key(password, secret, salt_bytes)
@@ -236,27 +240,106 @@ def login_view(request):
         request.session['_2fa_verified'] = profile.is_2fa_enabled
         request.session['is_2fa_verified'] = profile.is_2fa_enabled
 
-        response = redirect(
-            'setup_2fa' if (not profile.is_2fa_enabled or used_recovery_code) else 'dashboard'
-        )
-
-        if not profile.is_2fa_enabled:
-            _clear_trusted_device_cookie(response)
-            return response
-
-        if used_recovery_code:
-            _clear_trusted_device_cookie(response)
-        elif requires_otp and remember_device:
+        response = redirect('setup_2fa' if not profile.is_2fa_enabled else 'dashboard')
+        
+        # Set trusted device cookie if 2FA is enabled but we skipped it (trusted device flow)
+        if profile.is_2fa_enabled:
             _set_trusted_device_cookie(response, request, user, profile)
-        elif requires_otp and not remember_device:
+        else:
             _clear_trusted_device_cookie(response)
-
-        if not requires_otp:
-            _set_trusted_device_cookie(response, request, user, profile)
-
+            
         return response
 
     return render(request, 'accounts/login.html')
+
+
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
+def verify_2fa_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    pre_uid = request.session.get('pre_2fa_uid')
+    pre_password = request.session.get('pre_2fa_password')
+    
+    if not pre_uid or not pre_password:
+        messages.error(request, 'Session expired. Please log in again.')
+        return redirect('login')
+        
+    try:
+        user = User.objects.get(id=pre_uid)
+        profile = user.profile
+    except User.DoesNotExist:
+        messages.error(request, 'Invalid user session.')
+        return redirect('login')
+
+    if request.method == 'POST':
+        totp_code = request.POST.get('totp_code', '')
+        recovery_code = request.POST.get('recovery_code', '').strip().upper()
+        remember_device = request.POST.get('remember_device') == 'on'
+        ip = _client_ip(request)
+        otp_user_key = str(user.id)
+        used_recovery_code = False
+
+        if _is_locked('otp_user', otp_user_key) or _is_locked('otp_ip', ip):
+            messages.error(request, 'Too many 2FA attempts. Try again in 15 minutes.')
+            return render(request, 'accounts/verify_2fa.html')
+
+        if not totp_code and not recovery_code:
+            _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
+            _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
+            messages.error(request, 'Enter either a 2FA code or a recovery code.')
+            return render(request, 'accounts/verify_2fa.html')
+
+        if totp_code and not profile.verify_totp(totp_code):
+            _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
+            _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
+            messages.error(request, 'Invalid 2FA code.')
+            return render(request, 'accounts/verify_2fa.html')
+
+        if (not totp_code) and recovery_code:
+            if not profile.verify_and_consume_recovery_code(recovery_code):
+                _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
+                _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
+                messages.error(request, 'Invalid recovery code.')
+                return render(request, 'accounts/verify_2fa.html')
+            used_recovery_code = True
+            request.session['_needs_authenticator_reenroll'] = True
+            messages.warning(
+                request,
+                'Recovery code accepted. Reconnect your authenticator app now.',
+            )
+
+        _clear_failures('otp_user', otp_user_key)
+        _clear_failures('otp_ip', ip)
+
+        # Successful 2FA, complete login
+        login(request, user)
+        
+        # Derive master key
+        secret = profile.get_totp_secret()
+        salt_bytes = bytes.fromhex(profile.salt)
+        mk = derive_master_key(pre_password, secret, salt_bytes)
+        request.session['_mk'] = base64.b64encode(mk).decode()
+        
+        request.session['_2fa_verified'] = True
+        request.session['is_2fa_verified'] = True
+        
+        # Clean up temp session variables
+        request.session.pop('pre_2fa_uid', None)
+        request.session.pop('pre_2fa_password', None)
+
+        response = redirect('setup_2fa' if used_recovery_code else 'dashboard')
+
+        if used_recovery_code:
+            _clear_trusted_device_cookie(response)
+        elif remember_device:
+            _set_trusted_device_cookie(response, request, user, profile)
+        else:
+            _clear_trusted_device_cookie(response)
+
+        return response
+
+    return render(request, 'accounts/verify_2fa.html')
 
 
 @login_required

@@ -48,65 +48,76 @@ class AccountPolicyTests(TestCase):
     def test_login_requires_otp_for_non_trusted_device(self):
         self._create_2fa_user()
 
-        response = self.client.post(
-            reverse('login'),
-            data={'username': 'alice', 'password': 'StrongPassword123'},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Enter either a 2FA code or a recovery code.')
+        # Step 1: Login with password
+        response = self.client.post(reverse('login'), {
+            'username': 'alice',
+            'password': 'StrongPassword123'
+        })
+        # Should redirect to 2FA verification
+        self.assertRedirects(response, reverse('verify_2fa'))
 
     def test_login_skips_otp_after_trusted_device_is_remembered(self):
         _, profile = self._create_2fa_user()
         code = pyotp.TOTP(profile.get_totp_secret()).now()
 
-        first = self.client.post(
-            reverse('login'),
-            data={
-                'username': 'alice',
-                'password': 'StrongPassword123',
-                'totp_code': code,
-                'remember_device': 'on',
-            },
-        )
-        self.assertEqual(first.status_code, 302)
+        # Step 1: First login, provide password
+        response = self.client.post(reverse('login'), {
+            'username': 'alice',
+            'password': 'StrongPassword123'
+        })
+        self.assertRedirects(response, reverse('verify_2fa'))
 
+        # Step 2: Provide OTP and check 'remember_device'
+        response2 = self.client.post(reverse('verify_2fa'), {
+            'totp_code': code,
+            'remember_device': 'on'
+        })
+        self.assertRedirects(response2, reverse('dashboard'))
+
+        # Log out
         self.client.post(reverse('logout'))
 
-        second = self.client.post(
-            reverse('login'),
-            data={'username': 'alice', 'password': 'StrongPassword123'},
-        )
-        self.assertEqual(second.status_code, 302)
-        self.assertEqual(second.url, reverse('dashboard'))
+        # Second login - should bypass 2FA due to trusted device cookie
+        response3 = self.client.post(reverse('login'), {
+            'username': 'alice',
+            'password': 'StrongPassword123'
+        })
+        # Jumps straight to dashboard
+        self.assertRedirects(response3, reverse('dashboard'))
 
     def test_login_accepts_and_consumes_recovery_code(self):
         _, profile = self._create_2fa_user()
         recovery_codes = profile.generate_recovery_codes()
 
-        first = self.client.post(
-            reverse('login'),
-            data={
-                'username': 'alice',
-                'password': 'StrongPassword123',
-                'recovery_code': recovery_codes[0],
-            },
-        )
-        self.assertEqual(first.status_code, 302)
-        self.assertEqual(first.url, reverse('setup_2fa'))
+        # Step 1: Login with password
+        response = self.client.post(reverse('login'), {
+            'username': 'alice',
+            'password': 'StrongPassword123'
+        })
+        self.assertRedirects(response, reverse('verify_2fa'))
 
+        # Step 2: Provide recovery code instead of TOTP
+        response2 = self.client.post(reverse('verify_2fa'), {
+            'recovery_code': recovery_codes[0]
+        })
+        # Recovery codes force a redirection to setup_2fa to re-enroll
+        self.assertRedirects(response2, reverse('setup_2fa'))
+
+        # Log out
         self.client.post(reverse('logout'))
 
-        second = self.client.post(
-            reverse('login'),
-            data={
-                'username': 'alice',
-                'password': 'StrongPassword123',
-                'recovery_code': recovery_codes[0],
-            },
-        )
-        self.assertEqual(second.status_code, 200)
-        self.assertContains(second, 'Invalid recovery code.')
+        # Second login with same code should fail
+        response3 = self.client.post(reverse('login'), {
+            'username': 'alice',
+            'password': 'StrongPassword123'
+        })
+        self.assertRedirects(response3, reverse('verify_2fa'))
+        
+        response4 = self.client.post(reverse('verify_2fa'), {
+            'recovery_code': recovery_codes[0]
+        })
+        self.assertEqual(response4.status_code, 200)
+        self.assertContains(response4, 'Invalid recovery code.')
 
     def test_setup_2fa_shows_recovery_codes_after_verify(self):
         user = User.objects.create_user(username='sam', password='StrongPassword123')
