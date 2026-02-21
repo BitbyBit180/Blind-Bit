@@ -421,7 +421,19 @@ def search_api(request):
             try:
                 ef = EncryptedFile.objects.get(file_id=fid)
                 plain = decrypt_file_data(bytes(ef.encrypted_data), fid, keys['file_encryption_key'])
-                full_text = plain.decode('utf-8', errors='replace')
+                ext = os.path.splitext(fname or '')[1].lower()
+                if ext == '.pdf':
+                    tmp_pdf_path = None
+                    try:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
+                            tmp_pdf.write(plain)
+                            tmp_pdf_path = tmp_pdf.name
+                        full_text = extract_text(tmp_pdf_path)
+                    finally:
+                        if tmp_pdf_path and os.path.exists(tmp_pdf_path):
+                            os.unlink(tmp_pdf_path)
+                else:
+                    full_text = plain.decode('utf-8', errors='replace')
                 preview = full_text[:400]
             except:
                 full_text = ''
