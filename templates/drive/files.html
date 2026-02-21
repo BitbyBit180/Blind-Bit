@@ -41,17 +41,17 @@
                     d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
                 <path d="M14 2v5a1 1 0 0 0 1 1h5" />
             </svg></div>
-        <div class="file-info">
-            <span class="file-name">{{ f.filename }}</span>
-            <span class="file-meta">{{ f.uploaded_at|date:"M d, H:i" }} · {{ f.encrypted_data|length|filesizeformat
-                }}</span>
-        </div>
-        <div class="file-actions">
-            <button class="btn btn-sm btn-ghost-orange"
-                onclick="openShareModal('{{ f.file_id }}', '{{ f.filename }}')">Share</button>
-            <a href="{% url 'download_file' f.file_id %}" class="btn btn-sm btn-ghost-orange">Download</a>
-            <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);"
-                onclick="deleteFile('{{ f.file_id }}')">Delete</button>
+        <div class="file-details" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+            <div class="file-header" style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="file-name" style="margin: 0; white-space: normal; word-break: break-all;">{{ f.filename }}</span>
+                <span class="file-meta" style="margin: 0;">{{ f.uploaded_at|date:"M d, H:i" }} &middot; {{ f.encrypted_data|length|filesizeformat }}</span>
+            </div>
+            <div class="file-actions" style="justify-content: flex-start;">
+                <button class="btn btn-sm btn-orange" onclick="deleteFile('{{ f.file_id }}')">Delete</button>
+                <button class="btn btn-sm btn-orange"
+                    onclick="openShareModal('{{ f.file_id }}', '{{ f.filename|escapejs }}')">Share</button>
+                <a href="{% url 'download_file' f.file_id %}" class="btn btn-sm btn-orange">Download</a>
+            </div>
         </div>
     </div>
     {% empty %}
@@ -76,14 +76,16 @@
         <div class="file-icon"
             style="font-size:20px;background:var(--indigo-soft);border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--indigo-dark);font-weight:700;">
             {{ r.record_type|upper|truncatechars:2 }}</div>
-        <div class="file-info">
-            <span class="file-name">{{ r.record_type|upper }} Record</span>
-            <span class="file-meta">{{ r.uploaded_at|date:"M d, H:i" }} · {{ r.record_id|truncatechars:16 }}</span>
-        </div>
-        <div class="file-actions">
-            <button class="btn btn-sm btn-ghost-orange" onclick="viewRecord('{{ r.record_id }}')">View</button>
-            <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);"
-                onclick="deleteRecord('{{ r.record_id }}')">Delete</button>
+        <div class="file-details" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+            <div class="file-header" style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="file-name" style="margin: 0; white-space: normal; word-break: break-all;">{{
+                    r.record_type|upper }} Record</span>
+                <span class="file-meta" style="margin: 0;">{{ r.uploaded_at|date:"M d, H:i" }} &middot; {{ r.record_id|truncatechars:16 }}</span>
+            </div>
+            <div class="file-actions" style="justify-content: flex-start;">
+                <button class="btn btn-sm btn-orange" onclick="viewRecord('{{ r.record_id }}')">View</button>
+                <button class="btn btn-sm btn-orange" onclick="deleteRecord('{{ r.record_id }}')">Delete</button>
+            </div>
         </div>
     </div>
     {% endfor %}

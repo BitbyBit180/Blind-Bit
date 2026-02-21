@@ -13,20 +13,12 @@
         </button>
         <button class="mode-chip" data-type="text" id="type-btn-text" onclick="setRecordType('text')"
             style="border-radius:var(--radius-sm);">
-            <svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-  <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-</svg> Text
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+                <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+            </svg> Text
         </button>
     </div>
     <textarea id="record-input" rows="6"
@@ -58,35 +50,29 @@
             style="width:44px;height:44px;flex-shrink:0;background:{% if r.record_type == 'json' %}var(--orange-soft){% else %}var(--indigo-soft){% endif %};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:{% if r.record_type == 'json' %}var(--orange-dark){% else %}var(--indigo-dark){% endif %};">
             {% if r.record_type == 'json' %}{ }{% else %}Tx{% endif %}
         </div>
-        <div class="file-info">
-            <span class="file-name">{{ r.record_type|upper }} Record</span>
-            <span class="file-meta">{{ r.uploaded_at|date:"M d, H:i" }}</span>
-        </div>
-        <div class="file-actions">
-            <button class="btn btn-sm btn-ghost-orange" onclick="viewRecord('{{ r.record_id }}')">View</button>
-            <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);"
-                onclick="deleteRecord('{{ r.record_id }}')">Delete</button>
+        <div class="file-details" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+            <div class="file-header" style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="file-name" style="margin: 0; white-space: normal; word-break: break-all;">{{
+                    r.record_type|upper }} Record</span>
+                <span class="file-meta" style="margin: 0;">{{ r.uploaded_at|date:"M d, H:i" }}</span>
+            </div>
+            <div class="file-actions" style="justify-content: flex-start;">
+                <button class="btn btn-sm btn-orange" onclick="viewRecord('{{ r.record_id }}')">View</button>
+                <button class="btn btn-sm btn-orange" onclick="deleteRecord('{{ r.record_id }}')">Delete</button>
+            </div>
         </div>
     </div>
     {% empty %}
     <div class="empty-state" style="grid-column:1/-1;">
-        <span class="empty-icon"><svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-  <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-  <path d="M10 9H8" />
-  <path d="M16 13H8" />
-  <path d="M16 17H8" />
-</svg></span>
+        <span class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+                <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+                <path d="M10 9H8" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+            </svg></span>
         <div class="empty-title">No records yet</div>
         <p class="empty-desc">Add a JSON or text record above to begin encrypted storage</p>
     </div>

@@ -5,50 +5,35 @@
 
 {% block content %}
 <div class="files-grid" id="shared-grid">
-    {% for s in shares %}
-    <div class="file-card" id="shared-{{ s.file.file_id }}">
-        <div class="file-icon"><svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-  <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-</svg></div>
-        <div class="file-info">
-            <span class="file-name">{{ s.file.filename }}</span>
-            <span class="file-meta">Shared by {{ s.owner.username }} · {{ s.created_at|date:"M d, H:i" }}</span>
-        </div>
-        <div class="file-actions">
-            <a href="{% url 'download_file' s.file.file_id %}" class="btn btn-sm btn-ghost-orange">Download</a>
-        </div>
+  {% for s in shares %}
+  <div class="file-card" id="shared-{{ s.file.file_id }}">
+    <div class="file-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path
+          d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+        <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+      </svg></div>
+    <div class="file-details" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+      <div class="file-header" style="display: flex; flex-direction: column; gap: 4px;">
+        <span class="file-name" style="margin: 0; white-space: normal; word-break: break-all;">{{ s.file.filename }}</span>
+        <span class="file-meta" style="margin: 0;">Shared by {{ s.owner.username }} &middot; {{ s.created_at|date:"M d, H:i" }}</span>
+      </div>
+      <div class="file-actions" style="justify-content: flex-start;">
+        <a href="{% url 'download_file' s.file.file_id %}" class="btn btn-sm btn-orange">Download</a>
+      </div>
     </div>
-    {% empty %}
-    <div class="empty-state" style="grid-column:1/-1;">
-        <span class="empty-icon"><svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-  <polyline points="16 6 12 2 8 6" />
-  <line x1="12" y1="2" x2="12" y2="15" />
-</svg></span>
-        <div class="empty-title">No shared files</div>
-        <p class="empty-desc">Files shared with you by other users will appear here</p>
-    </div>
-    {% endfor %}
+  </div>
+  {% empty %}
+  <div class="empty-state" style="grid-column:1/-1;">
+    <span class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+        <polyline points="16 6 12 2 8 6" />
+        <line x1="12" y1="2" x2="12" y2="15" />
+      </svg></span>
+    <div class="empty-title">No shared files</div>
+    <p class="empty-desc">Files shared with you by other users will appear here</p>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}
