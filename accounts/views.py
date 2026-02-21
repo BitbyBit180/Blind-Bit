@@ -30,11 +30,16 @@ TRUSTED_DEVICE_SALT = 'accounts.trusted_device_2fa'
 TRUSTED_DEVICE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 
 
-def _login_context(username: str = '') -> dict:
-    return {
-        'username': username,
-        'google_oauth_enabled': bool(getattr(settings, 'GOOGLE_OAUTH_ENABLED', False)),
+def _auth_context(**kwargs) -> dict:
+    google_available = bool(getattr(settings, 'GOOGLE_OAUTH_AVAILABLE', False))
+    google_enabled = bool(getattr(settings, 'GOOGLE_OAUTH_ENABLED', False))
+
+    ctx = {
+        'google_oauth_enabled': google_enabled,
+        'google_oauth_available': google_available,
     }
+    ctx.update(kwargs)
+    return ctx
 
 
 def _client_ip(request):
@@ -158,16 +163,16 @@ def register_view(request):
 
         if not username or not password:
             messages.error(request, 'Username and password are required.')
-            return render(request, 'accounts/register.html')
+            return render(request, 'accounts/register.html', _auth_context())
         if password != password2:
             messages.error(request, 'Passwords do not match.')
-            return render(request, 'accounts/register.html')
+            return render(request, 'accounts/register.html', _auth_context())
         if len(password) < 10:
             messages.error(request, 'Password must be at least 10 characters.')
-            return render(request, 'accounts/register.html')
+            return render(request, 'accounts/register.html', _auth_context())
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already taken.')
-            return render(request, 'accounts/register.html')
+            return render(request, 'accounts/register.html', _auth_context())
 
         user = User.objects.create_user(username=username, email=email, password=password)
         profile = UserProfile.objects.create(user=user)
@@ -180,7 +185,7 @@ def register_view(request):
         request.session['is_2fa_verified'] = False
         return redirect('setup_2fa')
 
-    return render(request, 'accounts/register.html')
+    return render(request, 'accounts/register.html', _auth_context())
 
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
@@ -196,14 +201,14 @@ def login_view(request):
 
         if _is_locked('pwd_user', user_key) or _is_locked('pwd_ip', ip):
             messages.error(request, 'Too many login attempts. Try again in 15 minutes.')
-            return render(request, 'accounts/login.html', _login_context(username))
+            return render(request, 'accounts/login.html', _auth_context(username=username))
 
         user = authenticate(request, username=username, password=password)
         if user is None:
             _register_failure('pwd_user', user_key, MAX_PASSWORD_FAILS_USER)
             _register_failure('pwd_ip', ip, MAX_PASSWORD_FAILS_IP)
             messages.error(request, 'Invalid username or password.')
-            return render(request, 'accounts/login.html', _login_context(username))
+            return render(request, 'accounts/login.html', _auth_context(username=username))
 
         _clear_failures('pwd_user', user_key)
         _clear_failures('pwd_ip', ip)
@@ -230,7 +235,7 @@ def login_view(request):
 
         return response
 
-    return render(request, 'accounts/login.html', _login_context())
+    return render(request, 'accounts/login.html', _auth_context())
 
 
 @login_required
