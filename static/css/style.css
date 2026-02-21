@@ -200,57 +200,6 @@ h3 {
     font-size: 16px;
 }
 
-.brand-text {
-    font-family: 'DM Serif Display', serif;
-    font-size: 20px;
-    font-weight: 400;
-    color: var(--text);
-    letter-spacing: -0.02em;
-}
-
-.sidebar-nav {
-    flex: 1;
-    padding: 14px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    overflow-y: auto;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    color: var(--text-dim);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: var(--transition);
-}
-
-.nav-item:hover {
-    background: var(--orange-soft);
-    color: var(--orange-dark);
-}
-
-.nav-item.active {
-    background: var(--orange-soft);
-    color: var(--orange-dark);
-    font-weight: 600;
-}
-
-.nav-icon {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 16px;
-}
-
 /* SVG nav icons */
 .nav-icon svg {
     width: 18px;
@@ -329,7 +278,7 @@ h3 {
     flex: 1;
     padding: 0;
     min-height: 100vh;
-    background: var(--bg);
+    background: transparent;
 }
 
 .top-bar {
@@ -338,7 +287,8 @@ h3 {
     justify-content: space-between;
     padding: 16px 32px;
     border-bottom: 1px solid var(--border);
-    background: var(--bg2);
+    background: rgba(244, 245, 248, 0.84);
+    backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
     z-index: 5;
@@ -346,7 +296,7 @@ h3 {
 }
 
 .page-title {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Fraunces', serif;
     font-size: 22px;
     font-weight: 400;
     color: var(--text);
@@ -379,16 +329,15 @@ h3 {
 }
 
 .btn-primary {
-    background: var(--text);
-    border-color: var(--text);
-    color: #fff;
+    color: #f5f7fb;
+    background: radial-gradient(circle at 26% 20%, #5f6778 0%, #1a1e27 44%, #0f1117 100%);
+    box-shadow: inset 0 0 24px rgba(255, 255, 255, .24), 0 4px 14px rgba(6, 10, 18, .35);
+    border: none;
 }
 
 .btn-primary:hover {
-    background: #2D2820;
-    border-color: #2D2820;
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(26, 22, 18, 0.25);
+    box-shadow: inset 0 0 24px rgba(255, 255, 255, .35), 0 6px 20px rgba(6, 10, 18, .45);
 }
 
 .btn-orange {
@@ -417,14 +366,14 @@ h3 {
 }
 
 .btn-ghost {
-    background: transparent;
+    color: #171a22;
     border-color: var(--border);
-    color: var(--text);
+    background: linear-gradient(180deg, #f5f5f6 0%, #ececef 100%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
 }
 
 .btn-ghost:hover {
-    background: var(--surface2);
-    border-color: var(--text-muted);
+    background: linear-gradient(180deg, #ececef 0%, #e2e2e5 100%);
 }
 
 .btn-ghost-orange {
@@ -450,17 +399,16 @@ h3 {
    AUTH PAGES
 ══════════════════════════════════════════════════════════════ */
 .auth-card {
-    background: rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-radius: 24px;
+    background: var(--surface);
+    border-radius: 30px;
     padding: 40px 44px;
     width: 100%;
     max-width: 440px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
     position: relative;
     z-index: 1;
+    backdrop-filter: blur(12px);
 }
 
 .auth-card.wide {
@@ -492,16 +440,16 @@ h3 {
 }
 
 .auth-header h1 {
-    font-family: 'DM Serif Display', serif;
+    font-family: 'Fraunces', serif;
     font-size: 28px;
     font-weight: 400;
-    color: #fff;
+    color: var(--text);
     margin-bottom: 6px;
     letter-spacing: -0.02em;
 }
 
 .auth-subtitle {
-    color: rgba(255, 255, 255, 0.60);
+    color: var(--text-dim);
     font-size: 14px;
 }
 
@@ -513,24 +461,24 @@ h3 {
 }
 
 .auth-step {
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    background: var(--surface2);
     border-radius: var(--radius-sm);
     padding: 8px 12px;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--text-muted);
 }
 
 .auth-step.active {
-    border-color: rgba(249, 115, 22, 0.5);
-    color: rgba(255, 255, 255, 0.85);
-    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.3);
+    color: var(--orange-dark);
+    background: var(--orange-soft);
 }
 
 .auth-flow-note {
     margin: 0 0 12px;
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--text-dim);
     line-height: 1.6;
     text-align: center;
 }
@@ -550,36 +498,36 @@ h3 {
 .form-group label {
     font-size: 12px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.65);
+    color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
 
 .form-group input {
-    padding: 11px 16px;
-    background: rgba(255, 255, 255, 0.10);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--radius-sm);
-    color: #fff;
+    padding: 11px 20px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--text);
     font-size: 14px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Manrope', sans-serif;
     transition: var(--transition);
 }
 
 .form-group input::placeholder {
-    color: rgba(255, 255, 255, 0.30);
+    color: var(--text-muted);
 }
 
 .form-group input:focus {
     outline: none;
-    border-color: rgba(249, 115, 22, 0.70);
-    background: rgba(255, 255, 255, 0.14);
-    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.20);
+    border-color: var(--orange);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
 }
 
 .form-hint {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--text-muted);
 }
 
 .form-toggle {
@@ -588,16 +536,68 @@ h3 {
 }
 
 .form-toggle a {
-    color: rgba(255, 255, 255, 0.80);
+    color: var(--text-dim);
     text-decoration: underline;
     font-size: 13px;
 }
 
 .form-toggle a:hover {
-    color: #fff;
+    color: var(--text);
 }
 
 .auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.auth-footer a {
+    color: var(--text);
+    text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2FA SETUP (inside app layout — light theme)
+══════════════════════════════════════════════════════════════ */
+.twofa-setup {
+    text-align: center;
+}
+
+.step-label {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.qr-wrapper {
+    display: inline-block;
+    background: #fff;
+    padding: 16px;
+    border-radius: var(--radius);
+    margin: 12px 0;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+.qr-image {
+    width: 200px;
+    height: 200px;
+}
+
+.secret-display {
+    margin: 16px 0;
+}
+
+.secret-code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--surface2);
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    letter-spacing: 3px;
+    margin: 8px 0;
     text-align: center;
     margin-top: 20px;
     font-size: 13px;
