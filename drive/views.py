@@ -33,19 +33,23 @@ logger = logging.getLogger(__name__)
 
 
 def _get_keys(request):
-    """Get user's derived keys from session. Returns None if not logged in with 2FA."""
-    mk_b64 = request.session.get('_mk')
-    if not mk_b64:
+    """Get user's derived keys from session.
+
+    Reads the DEK (Data Encryption Key) stored in session['_dek'] and
+    expands it into the three purpose-specific sub-keys via HKDF.
+    Returns None if the vault is locked or the user is not authenticated.
+    """
+    dek_b64 = request.session.get('_dek')  # was '_mk' pre-DEK upgrade
+    if not dek_b64:
         return None
     try:
-        mk = base64.b64decode(mk_b64)
-        return derive_keys(mk)
-    except:
+        dek = base64.b64decode(dek_b64)
+        return derive_keys(dek)
+    except Exception:
         return None
 
 
 def _get_counter(request):
-    """Get and increment a per-user counter from session."""
     ctr = request.session.get('_counter', 0) + 1
     request.session['_counter'] = ctr
     return ctr

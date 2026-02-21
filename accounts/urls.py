@@ -11,4 +11,5 @@ urlpatterns = [
     path('2fa/setup/', views.setup_2fa_view, name='setup_2fa'),
     path('2fa/verify/', views.verify_2fa_view, name='verify_2fa'),
     path('2fa/recovery-codes/', views.recovery_codes_view, name='recovery_codes'),
+    path('change-password/', views.change_password_view, name='change_password'),
 ]

@@ -1,5 +1,6 @@
 """
-Accounts views - registration, login, Google post-auth handling, 2FA, and data unlock.
+Accounts views - registration, login, Google post-auth handling, 2FA, data unlock,
+and password change (with DEK re-wrapping so encrypted data is never lost).
 """
 import io
 import base64
@@ -136,7 +137,18 @@ def _clear_trusted_device_cookie(response):
     response.delete_cookie(TRUSTED_DEVICE_COOKIE, path='/')
 
 
-def _set_master_key_from_passphrase(request, profile, passphrase: str) -> bool:
+def _unlock_vault_with_passphrase(request, profile, passphrase: str) -> bool:
+    """Verify passphrase, derive master key, and store DEK in session.
+
+    Flow:
+      1. Verify the data passphrase (fallback: Django password).
+      2. Derive master_key = KDF(passphrase + TOTP_secret + salt).
+      3a. If user already has a DEK  → unwrap it.
+      3b. If not (legacy account)    → generate & wrap a fresh DEK (one-time bootstrap).
+      4. Store DEK in session['_dek'] — master key is discarded immediately.
+
+    Returns True on success, False if the passphrase is wrong.
+    """
     if not profile.verify_data_passphrase(passphrase):
         return False
 
@@ -146,9 +158,24 @@ def _set_master_key_from_passphrase(request, profile, passphrase: str) -> bool:
         secret = profile.generate_totp_secret()
 
     salt_bytes = bytes.fromhex(profile.salt)
-    mk = derive_master_key(passphrase, secret, salt_bytes)
-    request.session['_mk'] = base64.b64encode(mk).decode()
+    master_key = derive_master_key(passphrase, secret, salt_bytes)
+
+    try:
+        if profile.has_dek():
+            dek = profile.unwrap_dek(master_key)
+        else:
+            # Legacy account: generate DEK for the first time, transparently.
+            dek = profile.generate_and_wrap_dek(master_key)
+    finally:
+        # Wipe the master key from local scope — it must not linger in memory.
+        del master_key
+
+    request.session['_dek'] = base64.b64encode(dek).decode()
     return True
+
+
+# Keep an alias so any third-party code referencing the old name still works.
+_set_master_key_from_passphrase = _unlock_vault_with_passphrase
 
 
 def _auto_unlock_for_social(request, user, profile) -> bool:
@@ -159,15 +186,15 @@ def _auto_unlock_for_social(request, user, profile) -> bool:
     synthetic_passphrase = f"social::{user.id}::{user.password}"
     if not profile.is_data_passphrase_set:
         profile.set_data_passphrase(synthetic_passphrase)
-    return _set_master_key_from_passphrase(request, profile, synthetic_passphrase)
+    return _unlock_vault_with_passphrase(request, profile, synthetic_passphrase)
 
 
-def _auth_redirect_target(profile, has_master_key: bool, used_recovery_code: bool = False):
+def _auth_redirect_target(profile, has_dek: bool, used_recovery_code: bool = False):
     if used_recovery_code:
         return 'setup_2fa'
     if not profile.is_2fa_enabled:
         return 'setup_2fa'
-    if has_master_key:
+    if has_dek:
         return 'dashboard'
     return 'unlock_data'
 
@@ -243,11 +270,11 @@ def login_view(request):
             return redirect('verify_2fa')
 
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-        has_master_key = _set_master_key_from_passphrase(request, profile, password)
+        has_dek = _unlock_vault_with_passphrase(request, profile, password)
         request.session['_2fa_verified'] = profile.is_2fa_enabled
         request.session['is_2fa_verified'] = profile.is_2fa_enabled
 
-        response = redirect(_auth_redirect_target(profile, has_master_key))
+        response = redirect(_auth_redirect_target(profile, has_dek))
 
         if profile.is_2fa_enabled:
             _set_trusted_device_cookie(response, request, user, profile)
@@ -279,7 +306,7 @@ def post_auth_view(request):
         request.session['_2fa_verified'] = False
         request.session['is_2fa_verified'] = False
 
-    if not request.session.get('_mk'):
+    if not request.session.get('_dek'):
         if _auto_unlock_for_social(request, request.user, profile):
             pass
         else:
@@ -350,14 +377,14 @@ def verify_2fa_view(request):
 
         request.session.pop('pending_2fa_uid', None)
 
-        has_master_key = False
+        has_dek = False
         if pre_password:
-            has_master_key = _set_master_key_from_passphrase(request, profile, pre_password)
+            has_dek = _unlock_vault_with_passphrase(request, profile, pre_password)
         elif _auto_unlock_for_social(request, user, profile):
-            has_master_key = True
+            has_dek = True
         request.session.pop('pre_2fa_password', None)
 
-        response = redirect(_auth_redirect_target(profile, has_master_key, used_recovery_code))
+        response = redirect(_auth_redirect_target(profile, has_dek, used_recovery_code))
 
         if used_recovery_code:
             _clear_trusted_device_cookie(response)
@@ -379,12 +406,12 @@ def unlock_data_view(request):
         request.session['pending_2fa_uid'] = request.user.id
         return redirect('verify_2fa')
 
-    if request.session.get('_mk'):
+    if request.session.get('_dek'):
         return redirect('setup_2fa' if not profile.is_2fa_enabled else 'dashboard')
 
     if request.method == 'POST':
         passphrase = request.POST.get('data_passphrase', '')
-        if _set_master_key_from_passphrase(request, profile, passphrase):
+        if _unlock_vault_with_passphrase(request, profile, passphrase):
             messages.success(request, 'Data vault unlocked.')
             return redirect('setup_2fa' if not profile.is_2fa_enabled else 'dashboard')
         messages.error(request, 'Invalid data passphrase.')
@@ -459,3 +486,78 @@ def recovery_codes_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+@login_required
+@require_POST
+def change_password_view(request):
+    """Change the user's password while keeping encrypted data accessible.
+
+    The DEK is re-wrapped with the new master key but is NEVER regenerated,
+    so all files encrypted with the DEK remain decryptable after the change.
+    """
+    profile = UserProfile.objects.get_or_create(user=request.user)[0]
+
+    # Must have a live DEK in session (i.e. vault is unlocked)
+    dek_b64 = request.session.get('_dek')
+    if not dek_b64:
+        messages.error(request, 'Your vault is locked. Please unlock it before changing your password.')
+        return redirect('unlock_data')
+
+    current_password = request.POST.get('current_password', '')
+    new_password = request.POST.get('new_password', '')
+    new_password2 = request.POST.get('new_password2', '')
+
+    if not current_password or not new_password:
+        messages.error(request, 'Current and new password are required.')
+        return redirect('dashboard')
+    if new_password != new_password2:
+        messages.error(request, 'New passwords do not match.')
+        return redirect('dashboard')
+    if len(new_password) < 10:
+        messages.error(request, 'New password must be at least 10 characters.')
+        return redirect('dashboard')
+    if not request.user.check_password(current_password):
+        messages.error(request, 'Current password is incorrect.')
+        return redirect('dashboard')
+
+    # Derive current and new master keys
+    totp_secret = profile.get_totp_secret()
+    salt_bytes = bytes.fromhex(profile.salt)
+    old_master_key = derive_master_key(current_password, totp_secret, salt_bytes)
+    new_master_key = derive_master_key(new_password, totp_secret, salt_bytes)
+
+    try:
+        if profile.has_dek():
+            # Re-wrap the SAME DEK — do NOT regenerate it.
+            profile.rewrap_dek(old_master_key, new_master_key)
+        else:
+            # Edge case: no DEK yet (very old account that somehow reached here).
+            # Generate one now; the session DEK takes precedence anyway.
+            dek = base64.b64decode(dek_b64)
+            from drive.sse_bridge import wrap_dek_with_master_key
+            iv, ciphertext, auth_tag = wrap_dek_with_master_key(new_master_key, dek)
+            profile.encrypted_dek = ciphertext
+            profile.dek_iv = iv
+            profile.dek_auth_tag = auth_tag
+            profile.save(update_fields=['encrypted_dek', 'dek_iv', 'dek_auth_tag'])
+    except ValueError as exc:
+        messages.error(request, f'Password change failed: {exc}')
+        return redirect('dashboard')
+    finally:
+        del old_master_key, new_master_key
+
+    # Update the Django auth password and keep the session alive.
+    request.user.set_password(new_password)
+    request.user.save()
+
+    # Update data-passphrase hash to match the new password.
+    profile.set_data_passphrase(new_password)
+
+    # Re-authenticate the session so Django doesn't log the user out.
+    from django.contrib.auth import update_session_auth_hash
+    update_session_auth_hash(request, request.user)
+
+    # DEK in session is unchanged (DEK itself never changed), so no session update needed.
+    messages.success(request, 'Password changed successfully. Your encrypted data is untouched.')
+    return redirect('dashboard')

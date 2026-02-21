@@ -235,3 +235,93 @@ class AccountPolicyTests(TestCase):
 
         good = self.client.post(reverse('unlock_data'), {'data_passphrase': 'VaultPassphrase123'})
         self.assertRedirects(good, reverse('dashboard'))
+
+
+class DEKTests(TestCase):
+    """Tests for the DEK (Data Encryption Key) key-wrapping layer."""
+
+    PASSWORD = 'StrongPassword123'
+    NEW_PASSWORD = 'NewStrongPass456'
+
+    def _register_user(self, username='dekuser'):
+        """Helper: create a user and produce a profile with DEK (as register_view does)."""
+        user = User.objects.create_user(username=username, password=self.PASSWORD)
+        profile = UserProfile.objects.create(user=user)
+        profile.generate_totp_secret()
+        profile.set_data_passphrase(self.PASSWORD)
+        # Simulate what _unlock_vault_with_passphrase does on first login
+        from drive.sse_bridge import derive_master_key
+        secret = profile.get_totp_secret()
+        salt_bytes = bytes.fromhex(profile.salt)
+        master_key = derive_master_key(self.PASSWORD, secret, salt_bytes)
+        profile.generate_and_wrap_dek(master_key)
+        del master_key
+        return user, profile
+
+    def test_dek_generated_on_registration(self):
+        """DEK fields must be populated after generate_and_wrap_dek is called."""
+        _, profile = self._register_user()
+        profile.refresh_from_db()
+        self.assertTrue(profile.has_dek())
+        self.assertIsNotNone(profile.encrypted_dek)
+        self.assertIsNotNone(profile.dek_iv)
+        self.assertIsNotNone(profile.dek_auth_tag)
+
+    def test_dek_survives_password_change_rewrap(self):
+        """rewrap_dek must produce the SAME DEK under a new master key."""
+        _, profile = self._register_user()
+        from drive.sse_bridge import derive_master_key
+        secret = profile.get_totp_secret()
+        salt_bytes = bytes.fromhex(profile.salt)
+
+        old_mk = derive_master_key(self.PASSWORD, secret, salt_bytes)
+        original_dek = profile.unwrap_dek(old_mk)
+
+        new_mk = derive_master_key(self.NEW_PASSWORD, secret, salt_bytes)
+        profile.rewrap_dek(old_mk, new_mk)
+        profile.refresh_from_db()
+
+        rewrapped_dek = profile.unwrap_dek(new_mk)
+        self.assertEqual(original_dek, rewrapped_dek,
+                         "DEK must be identical before and after re-wrapping")
+
+        del old_mk, new_mk
+
+    def test_dek_bootstrap_for_legacy_user(self):
+        """A user without a DEK must get one generated transparently on first vault unlock."""
+        user = User.objects.create_user(username='legacydek', password=self.PASSWORD)
+        profile = UserProfile.objects.create(user=user)
+        profile.generate_totp_secret()
+        profile.set_data_passphrase(self.PASSWORD)
+        # Deliberately do NOT generate a DEK (simulates a pre-DEK legacy account)
+        self.assertFalse(profile.has_dek())
+
+        # Simulate a login call to _unlock_vault_with_passphrase
+        self.client.force_login(user)
+        response = self.client.post(reverse('unlock_data'), {
+            'data_passphrase': self.PASSWORD,
+        })
+        # The view should succeed and redirect away from unlock_data
+        self.assertNotEqual(response.status_code, 200)
+
+        profile.refresh_from_db()
+        self.assertTrue(profile.has_dek(),
+                        "DEK must be bootstrapped for legacy accounts on first unlock")
+
+    def test_rewrap_dek_rejects_wrong_old_master_key(self):
+        """rewrap_dek must raise ValueError when the old master key is wrong."""
+        _, profile = self._register_user()
+        import os
+        wrong_key = os.urandom(32)
+        new_key = os.urandom(32)
+        with self.assertRaises(ValueError):
+            profile.rewrap_dek(wrong_key, new_key)
+
+    def test_unwrap_dek_raises_when_no_dek_stored(self):
+        """unwrap_dek must raise ValueError if no DEK has been generated yet."""
+        user = User.objects.create_user(username='nodekuser', password=self.PASSWORD)
+        profile = UserProfile.objects.create(user=user)
+        import os
+        with self.assertRaises(ValueError):
+            profile.unwrap_dek(os.urandom(32))
+

@@ -1,6 +1,7 @@
 """
 SSE Bridge — Connects Django views to the existing SSE engine.
-Handles per-user key derivation (password + TOTP secret → master key).
+Handles per-user key derivation (password + TOTP secret → master key)
+and DEK wrap/unwrap operations (key-wrapping layer).
 """
 import os
 import hashlib
@@ -61,6 +62,45 @@ def derive_keys(master_key: bytes) -> dict:
         "hmac_key": _derive(b"hmac"),
         "token_randomization_key": _derive(b"token-rand"),
     }
+
+
+# ---------------------------------------------------------------------------
+# DEK key-wrapping helpers
+# ---------------------------------------------------------------------------
+
+def wrap_dek_with_master_key(master_key: bytes, dek: bytes) -> tuple:
+    """AES-GCM encrypt the DEK with the master key.
+
+    Returns a 3-tuple: (iv: bytes, ciphertext: bytes, auth_tag: bytes).
+    The IV is 12 random bytes, the auth tag is 16 bytes (GCM default).
+    The master key MUST be exactly 32 bytes.
+    """
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    iv = os.urandom(12)
+    aesgcm = AESGCM(master_key)
+    # AESGCM.encrypt returns ciphertext || auth_tag
+    ct_tag = aesgcm.encrypt(iv, dek, None)
+    # Split ciphertext from the 16-byte GCM tag
+    ciphertext = ct_tag[:-16]
+    auth_tag = ct_tag[-16:]
+    return iv, ciphertext, auth_tag
+
+
+def unwrap_dek_with_master_key(master_key: bytes, iv: bytes,
+                               ciphertext: bytes, auth_tag: bytes) -> bytes:
+    """AES-GCM decrypt the DEK.
+
+    Raises ValueError on authentication failure (wrong master key / tampered data).
+    The master key MUST be exactly 32 bytes.
+    """
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.exceptions import InvalidTag
+    aesgcm = AESGCM(master_key)
+    try:
+        # Re-combine ciphertext + auth_tag as expected by the library
+        return aesgcm.decrypt(iv, ciphertext + auth_tag, None)
+    except (InvalidTag, Exception) as exc:
+        raise ValueError("DEK unwrap failed: authentication error") from exc
 
 
 def get_user_keys(password: str, totp_secret: str, salt: bytes) -> dict:
