@@ -103,7 +103,8 @@ def _set_trusted_device_cookie(response, request, user, profile):
         token,
         max_age=TRUSTED_DEVICE_MAX_AGE_SECONDS,
         httponly=True,
-        secure=not settings.DEBUG,
+        # Only mark secure on HTTPS so local HTTP dev can still persist this cookie.
+        secure=request.is_secure(),
         samesite='Lax',
         path='/',
     )
