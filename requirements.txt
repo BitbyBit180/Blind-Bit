@@ -1,0 +1,2 @@
+pdfminer.six>=20221105
+cryptography>=41.0.0
