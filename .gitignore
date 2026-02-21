@@ -1,0 +1,36 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+venv311/
+.venv/
+
+# Django
+db.sqlite3
+app.sqlite3
+app.sqlite3.bak
+*.sqlite3-journal
+media/
+staticfiles/
+storage/
+*.log
+
+# Secrets / Keys
+client_keys.json
+sse_security.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
