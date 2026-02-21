@@ -684,23 +684,26 @@ h3 {
 }
 
 .auth-layout .messages {
-    position: absolute;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 480px;
+    position: fixed;
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: 12px;
+    left: auto;
+    transform: none;
+    width: min(90vw, 380px);
     padding: 0;
-    z-index: 10;
+    z-index: 1000;
 }
 
 .alert {
-    padding: 12px 18px;
-    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    border-radius: 14px;
     font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 8px;
-    border-left: 3px solid;
+    line-height: 1.45;
+    font-weight: 600;
+    margin-bottom: 6px;
+    border: 1px solid transparent;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .alert-success,
@@ -721,6 +724,23 @@ h3 {
     background: var(--warn-soft);
     border-color: var(--warn);
     color: var(--warn);
+}
+
+.auth-layout .alert {
+    background: #fff;
+    color: var(--text);
+    border-color: var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 10px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+}
+
+.auth-layout .alert-warning {
+    background: #fff8eb;
+    color: #9a6700;
+    border-color: #f4d28b;
 }
 
 /* ═══════════════════════════════════════════════════════════
