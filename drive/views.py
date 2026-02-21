@@ -74,6 +74,59 @@ def dashboard(request):
     total_tokens = k_tokens + n_tokens + b_tokens
     r_tokens = RecordIndex.objects.filter(record__owner=request.user).count()
     recent_searches = SearchHistory.objects.filter(user=request.user)[:5]
+    total_items = file_count + record_count
+
+    indexed_file_count = FileIndex.objects.filter(
+        file__owner=request.user
+    ).values('file__file_id').distinct().count()
+    indexed_record_count = RecordIndex.objects.filter(
+        record__owner=request.user
+    ).values('record__record_id').distinct().count()
+    indexed_items = indexed_file_count + indexed_record_count
+
+    if not profile.is_2fa_enabled or total_items == 0:
+        search_state = 'disabled'
+    elif indexed_items < total_items:
+        search_state = 'partial'
+    else:
+        search_state = 'full'
+
+    if total_items == 0:
+        status_state = 'empty'
+        status_tone = 'yellow'
+        status_message = 'No protected data yet'
+    elif indexed_items < total_items:
+        status_state = 'attention'
+        status_tone = 'red'
+        status_message = 'Search index out of sync'
+    else:
+        status_state = 'healthy'
+        status_tone = 'green'
+        status_message = 'All records encrypted and searchable'
+
+    latest_file = EncryptedFile.objects.filter(owner=request.user).order_by('-uploaded_at').first()
+    latest_record = EncryptedRecord.objects.filter(owner=request.user).order_by('-uploaded_at').first()
+    latest_encryption_activity = None
+    if latest_file and latest_record:
+        latest_encryption_activity = max(latest_file.uploaded_at, latest_record.uploaded_at)
+    elif latest_file:
+        latest_encryption_activity = latest_file.uploaded_at
+    elif latest_record:
+        latest_encryption_activity = latest_record.uploaded_at
+
+    recovery_codes_remaining = 0
+    try:
+        recovery_codes_remaining = len(json.loads(profile.recovery_code_hashes or '[]'))
+    except Exception:
+        recovery_codes_remaining = 0
+
+    user_agent = (request.META.get('HTTP_USER_AGENT') or '').strip()
+    if not user_agent:
+        last_login_device = 'Unknown device'
+    elif len(user_agent) > 70:
+        last_login_device = f"{user_agent[:67]}..."
+    else:
+        last_login_device = user_agent
 
     return render(request, 'drive/dashboard.html', {
         'file_count': file_count,
@@ -85,6 +138,16 @@ def dashboard(request):
         'r_tokens': r_tokens,
         'recent_searches': recent_searches,
         'is_2fa_enabled': profile.is_2fa_enabled,
+        'status_state': status_state,
+        'status_tone': status_tone,
+        'status_message': status_message,
+        'search_state': search_state,
+        'latest_encryption_activity': latest_encryption_activity,
+        'last_login_device': last_login_device,
+        'key_age_days': int(max(0, (time.time() - request.user.date_joined.timestamp()) // 86400)),
+        'recovery_codes_remaining': recovery_codes_remaining,
+        'has_recovery_codes': recovery_codes_remaining > 0,
+        'needs_rebuild_index': total_items > 0 and indexed_items < total_items,
     })
 
 
