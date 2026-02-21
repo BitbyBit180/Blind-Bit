@@ -7,7 +7,7 @@
 - Status: Implementation-aligned draft for hackathon delivery
 
 ## 2. Executive Summary
-BlindBit SSE is a zero-knowledge style encrypted data platform where users can upload data, search encrypted indexes, and retrieve content without exposing plaintext to the server storage layer. The product combines authenticated encryption (AES-GCM), keyed tokenization (HMAC), and strong account security controls (password, 2FA, lockouts, trusted device flow, recovery codes).
+BlindBit SSE is a zero-knowledge style encrypted data platform where users can upload data, search encrypted indexes, and retrieve content without exposing plaintext to the server storage layer. The product combines authenticated encryption/decryption (AES-256-GCM), keyed tokenization (HMAC), HKDF-based key separation, DEK key-wrapping, and strong account security controls (password, 2FA, lockouts, trusted device flow, recovery codes).
 
 This PRD defines:
 - Product scope and user value
@@ -84,10 +84,12 @@ Acceptance criteria:
 2. 2FA setup and verification
 - TOTP secret provisioned via QR and manual key
 - User verifies one TOTP code to enable 2FA
+- When 2FA is not verified, dashboard/sidebar must display a clearly visible "2FA Pending" state with direct "Set up 2FA" action
 
 Acceptance criteria:
 - 2FA flag remains disabled until successful verification
 - 2FA setup attempts lock out after repeated failures
+- Pending users can reach 2FA setup in one click from dashboard/sidebar
 
 3. Login with adaptive 2FA
 - Password check first
@@ -102,31 +104,42 @@ Acceptance criteria:
 - One-time recovery codes generated and stored hashed
 - Recovery code can replace TOTP once and is consumed
 - Recovery login forces re-enrollment of authenticator and refreshes recovery codes
+- Recovery-code screen requires explicit user confirmation before proceeding after claiming codes are downloaded/saved
 
 Acceptance criteria:
 - Used recovery code cannot be reused
 - Recovery codes shown once after generation and not retrievable in plaintext later
+- "I have downloaded/saved" action shows confirmation prompt and can be canceled
 
 5. Defensive controls
 - Per-IP and per-account lockouts for password and OTP failures
 - Rate limiting on login POST
 - Security headers enabled globally
 - Error responses avoid stack trace leakage
+- Logout action requires explicit user confirmation dialog to reduce accidental sign-out
 
 Acceptance criteria:
 - Lockout messages shown when thresholds exceeded
 - Sensitive headers present in responses
+- Logout cancellation keeps session active and stays on current page
 
 ## 7.2 Key Management and Session Behavior
-1. Session key derivation
-- Master key derived at login from password + TOTP secret + user salt
-- Derived key material stored only in server session (not DB)
+1. Master key derivation
+- Master key derived from data passphrase + TOTP secret + per-user salt
+- Master key is used for DEK wrapping/unwrapping and then discarded from runtime scope
 
-2. Session gating
-- Sensitive endpoints require authenticated user and 2FA-verified session marker
+2. DEK storage and session handling
+- A random 256-bit DEK is generated per user and stored only as AES-GCM encrypted fields (`encrypted_dek`, `dek_iv`, `dek_auth_tag`)
+- Session stores only the unlocked DEK (base64), not the master key
+- Purpose keys (`file_encryption_key`, `hmac_key`, `token_randomization_key`) are HKDF-derived from DEK at request time
+
+3. Session gating
+- Sensitive endpoints require authenticated user, 2FA-verified session marker, and unlocked DEK in session
 
 Acceptance criteria:
 - Upload, search, download, delete endpoints fail with 403/redirect when session key marker missing
+- If DEK unwrap authentication fails, vault unlock must fail safely without partial access
+- Master key is never persisted in plaintext DB fields
 
 ## 7.3 Encrypted Data Management
 1. Upload
@@ -134,14 +147,19 @@ Acceptance criteria:
 - Extract text, preprocess keywords, encrypt payload, build index entries
 
 2. Download
-- Decrypt owned encrypted blob using session key material
+- Decrypt owned encrypted blob using AES-256-GCM with authenticated tag verification
 
 3. Delete
 - Remove encrypted objects and related index rows
 
+4. Record encryption and decryption
+- JSON/text records encrypted with AES-256-GCM and decrypted only for authorized owner sessions
+- Record ciphertext parsing must validate IV/tag layout before plaintext return
+
 Acceptance criteria:
 - User isolation enforced for all operations
 - Decryption/download fails safely if key session invalid
+- AES-GCM auth failures (tamper/wrong key) are handled as secure errors without plaintext leakage
 
 ## 7.4 Search (SSE)
 1. Query parsing and logic
@@ -208,6 +226,9 @@ Targets (hackathon baseline):
 ## 9.1 Assets
 - Plaintext file/record contents
 - Query intent
+- Plaintext DEK (runtime only)
+- Wrapped DEK tuple (`encrypted_dek`, `dek_iv`, `dek_auth_tag`)
+- Master key (ephemeral, derived at unlock)
 - Session key material
 - 2FA and recovery factors
 
@@ -236,6 +257,7 @@ Targets (hackathon baseline):
 
 ## 10. Data and Storage Requirements
 - User profile stores encrypted TOTP secret and metadata
+- User profile stores hashed data-passphrase verifier and wrapped DEK fields
 - Encrypted blobs stored as binary payloads
 - Token indexes store opaque token values and scoring metadata
 - Recovery codes stored as password-style hashes only
@@ -247,14 +269,26 @@ Targets (hackathon baseline):
 - Clear prompts for when/why 2FA is required on the dedicated second-step page.
 - Remember-device option with explicit duration, accessible during the 2FA challenge.
 - Recovery code option visible on the 2FA challenge page.
+- Logout uses a sign-out confirmation popup.
 
 2. Recovery UX
 - After recovery login, user must rebind authenticator app before normal use
 - Fresh recovery codes shown once and must be saved offline
+- Recovery code acknowledgment ("I have downloaded/saved") requires a second confirmation popup before navigation
 
-3. Search UX
+3. Data Unlock UX
+- Vault unlock page prompts for data passphrase when DEK is not present in session
+- Successful unlock restores data operations without re-encrypting existing content
+- Failed unlock attempt returns clear error without exposing cryptographic internals
+
+4. Search UX
 - Explain mode behavior simply in UI
 - Return readable errors for invalid queries/modes
+
+5. Sidebar and Security Status UX
+- Sidebar profile block must show current 2FA state (Verified vs Pending) with clear color contrast
+- Pending state includes a direct "Set up now" link to the 2FA setup flow
+- Dashboard action label must reflect state: "Set up 2FA" when pending, "Rotate keys" when verified
 
 4. Playground UX
 - Mission-first structure to reduce confusion
@@ -278,6 +312,9 @@ Minimum regression suite must cover:
 - Forced re-enrollment path after recovery
 - Sensitive endpoint 2FA/session gate behavior
 - Search parser validation for mode/logic and +/- terms
+- DEK generation/wrapping on first unlock for legacy accounts
+- DEK unwrap and error handling on invalid master key/tag
+- Password change path re-wraps same DEK without data loss
 
 Release gate:
 - App test suite green for accounts + drive modules
