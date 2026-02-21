@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from drive.sse_bridge import derive_master_key
+from client.sharing_crypto import generate_x25519_keypair, encrypt_private_key
 from .models import UserProfile
 
 LOCKOUT_SECONDS = 15 * 60
@@ -217,6 +218,19 @@ def register_view(request):
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         request.session['_vault_passphrase'] = password
         _set_master_key_from_passphrase(request, profile, password)
+
+        # Generate X25519 keypair for file sharing
+        mk = base64.b64decode(request.session['_mk'])
+        priv_bytes, pub_bytes = generate_x25519_keypair()
+        enc_priv, priv_iv, priv_tag = encrypt_private_key(priv_bytes, mk)
+        profile.public_key = pub_bytes
+        profile.encrypted_private_key = enc_priv
+        profile.private_key_iv = priv_iv
+        profile.private_key_tag = priv_tag
+        profile.save(update_fields=[
+            'public_key', 'encrypted_private_key', 'private_key_iv', 'private_key_tag'
+        ])
+
         request.session['_2fa_verified'] = True
         request.session['is_2fa_verified'] = True
         return redirect('dashboard')

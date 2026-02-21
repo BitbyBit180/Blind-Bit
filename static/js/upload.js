@@ -44,7 +44,19 @@ async function submitUpload() {
             headers: { 'X-CSRFToken': getCSRF() },
             body: fd
         });
-        const d = await res.json();
+
+        let d;
+        try {
+            d = await res.json();
+        } catch (parseErr) {
+            status.style.display = 'none';
+            await popup.alert(
+                `Server returned status ${res.status} but the response could not be parsed. The file may have been uploaded — check My Files.`,
+                { title: 'Upload Response Error', tone: 'red' }
+            );
+            return;
+        }
+
         status.style.display = 'none';
 
         if (!res.ok || d.error) {

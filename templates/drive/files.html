@@ -35,25 +35,19 @@
 <div class="files-grid" id="files-grid">
     {% for f in files %}
     <div class="file-card" id="file-{{ f.file_id }}">
-        <div class="file-icon"><svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-  <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-</svg></div>
+        <div class="file-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+                <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+            </svg></div>
         <div class="file-info">
             <span class="file-name">{{ f.filename }}</span>
             <span class="file-meta">{{ f.uploaded_at|date:"M d, H:i" }} · {{ f.encrypted_data|length|filesizeformat }}</span>
         </div>
         <div class="file-actions">
+            <button class="btn btn-sm btn-ghost-orange"
+                onclick="openShareModal('{{ f.file_id }}', '{{ f.filename }}')">Share</button>
             <a href="{% url 'download_file' f.file_id %}" class="btn btn-sm btn-ghost-orange">Download</a>
             <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);"
                 onclick="deleteFile('{{ f.file_id }}')">Delete</button>
@@ -61,19 +55,11 @@
     </div>
     {% empty %}
     <div class="empty-state" style="grid-column:1/-1;">
-        <span class="empty-icon"><svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
-</svg></span>
+        <span class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+            </svg></span>
         <div class="empty-title">No files yet</div>
         <p class="empty-desc">Upload a PDF or TXT file to get started with encrypted storage</p>
         <a href="{% url 'upload_page' %}" class="btn btn-orange">Upload Your First File</a>
@@ -115,6 +101,40 @@
         </div>
         <pre id="record-content"
             style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;overflow:auto;max-height:400px;color:var(--text);white-space:pre-wrap;"></pre>
+    </div>
+</div>
+<!-- Share Modal -->
+<div id="share-modal" class="modal"
+    style="display:none;position:fixed;inset:0;z-index:100;background:rgba(26,22,18,0.5);align-items:center;justify-content:center;padding:20px;">
+    <div class="modal-content"
+        style="background:var(--bg2);border-radius:var(--radius);padding:28px;max-width:480px;width:100%;box-shadow:var(--shadow-lg);border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;">Share File</h3>
+            <button onclick="closeShareModal()"
+                style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-dim);">&times;</button>
+        </div>
+        <p id="share-filename" style="color:var(--text-dim);font-size:13px;margin-bottom:16px;"></p>
+        <input type="hidden" id="share-file-id" value="">
+        <div style="margin-bottom:16px;">
+            <label for="share-username"
+                style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--text);">Recipient
+                Username</label>
+            <input type="text" id="share-username" placeholder="Enter username..."
+                style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;">
+        </div>
+        <div id="share-status"
+            style="display:none;padding:10px;border-radius:var(--radius-sm);margin-bottom:12px;font-size:13px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn btn-ghost" onclick="closeShareModal()">Cancel</button>
+            <button class="btn btn-orange" id="share-submit-btn" onclick="submitShare()">Share</button>
+        </div>
+
+        <!-- Shared With List -->
+        <div id="share-list-section"
+            style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;display:none;">
+            <h4 style="font-size:14px;font-weight:500;margin-bottom:10px;color:var(--text);">Currently shared with</h4>
+            <div id="share-list" style="font-size:13px;color:var(--text-dim);"></div>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -149,3 +149,130 @@ async function deleteRecord(rid) {
 function closeModal() {
     document.getElementById('record-modal').style.display = 'none';
 }
+
+/* -----------------------------------------------------------------------
+   File Sharing
+   ----------------------------------------------------------------------- */
+
+function openShareModal(fileId, filename) {
+    document.getElementById('share-file-id').value = fileId;
+    document.getElementById('share-filename').textContent = `Sharing: ${filename}`;
+    document.getElementById('share-username').value = '';
+    const statusEl = document.getElementById('share-status');
+    statusEl.style.display = 'none';
+    statusEl.textContent = '';
+    document.getElementById('share-modal').style.display = 'flex';
+    loadShareList(fileId);
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').style.display = 'none';
+}
+
+async function submitShare() {
+    const popup = window.BlindBitPopup;
+    const fileId = document.getElementById('share-file-id').value;
+    const username = document.getElementById('share-username').value.trim();
+    const statusEl = document.getElementById('share-status');
+    const btn = document.getElementById('share-submit-btn');
+
+    if (!username) {
+        statusEl.style.display = 'block';
+        statusEl.style.background = 'var(--error-soft, #fde8e8)';
+        statusEl.style.color = 'var(--error, #c0392b)';
+        statusEl.textContent = 'Please enter a username.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sharing...';
+    statusEl.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/share/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF(),
+            },
+            body: JSON.stringify({
+                file_id: fileId,
+                target_username: username,
+            }),
+        });
+        const d = await res.json();
+        if (!res.ok || d.error) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'var(--error-soft, #fde8e8)';
+            statusEl.style.color = 'var(--error, #c0392b)';
+            statusEl.textContent = d.error || 'Share failed';
+        } else {
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'var(--green-soft, #e8f8e8)';
+            statusEl.style.color = 'var(--green-dark, #27ae60)';
+            statusEl.textContent = `File shared with ${username}!`;
+            document.getElementById('share-username').value = '';
+            loadShareList(fileId);
+        }
+    } catch (e) {
+        statusEl.style.display = 'block';
+        statusEl.style.background = 'var(--error-soft, #fde8e8)';
+        statusEl.style.color = 'var(--error, #c0392b)';
+        statusEl.textContent = 'Network error: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Share';
+    }
+}
+
+async function loadShareList(fileId) {
+    const section = document.getElementById('share-list-section');
+    const listEl = document.getElementById('share-list');
+
+    try {
+        const res = await fetch(`/api/files/${fileId}/shares/`);
+        const d = await res.json();
+        if (!res.ok || !d.shares) {
+            section.style.display = 'none';
+            return;
+        }
+        if (d.shares.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = 'block';
+        listEl.innerHTML = d.shares.map(s =>
+            `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
+                <span>${s.username} <span style="opacity:.5;font-size:12px;">· ${new Date(s.shared_at).toLocaleDateString()}</span></span>
+                <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);font-size:11px;padding:2px 8px;"
+                    onclick="revokeShare('${fileId}', '${s.username}')">Revoke</button>
+            </div>`
+        ).join('');
+    } catch {
+        section.style.display = 'none';
+    }
+}
+
+async function revokeShare(fileId, username) {
+    const popup = window.BlindBitPopup;
+    const confirmed = await popup.confirm(`Revoke access for ${username}?`, {
+        title: 'Revoke Share',
+        tone: 'red',
+        confirmText: 'Revoke',
+    });
+    if (!confirmed) return;
+    try {
+        const res = await fetch(`/api/share/${fileId}/revoke/${username}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRF() },
+        });
+        const d = await res.json();
+        if (!res.ok || d.error) {
+            await popup.alert(d.error || 'Revoke failed', { title: 'Revoke Failed', tone: 'red' });
+            return;
+        }
+        loadShareList(fileId);
+    } catch (e) {
+        await popup.alert('Revoke failed: ' + e.message, { title: 'Revoke Failed', tone: 'red' });
+    }
+}

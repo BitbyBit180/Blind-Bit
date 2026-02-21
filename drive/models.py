@@ -13,11 +13,20 @@ class EncryptedFile(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='files')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
+    # Per-file AES key wrapped with owner's master-derived key
+    encrypted_file_key = models.BinaryField(blank=True, null=True)
+    file_key_iv = models.BinaryField(blank=True, null=True)
+    file_key_tag = models.BinaryField(blank=True, null=True)
+
     class Meta:
         ordering = ['-uploaded_at']
 
     def __str__(self):
         return f"{self.filename} ({self.file_id[:12]}...)"
+
+    @property
+    def has_per_file_key(self):
+        return bool(self.encrypted_file_key)
 
 
 class FileIndex(models.Model):
@@ -70,3 +79,23 @@ class SearchHistory(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class FileShare(models.Model):
+    """Tracks per-file sharing: stores the file AES key wrapped for the recipient."""
+    file = models.ForeignKey(EncryptedFile, on_delete=models.CASCADE, related_name='shares')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shared_files')
+    shared_with = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_shares')
+    wrapped_key = models.BinaryField()          # File AES key wrapped with recipient's X25519 public key
+    ephemeral_public = models.BinaryField()     # Ephemeral X25519 public key used for wrapping
+    wrapped_iv = models.BinaryField()           # IV used for the AES-GCM wrapping
+    wrapped_tag = models.BinaryField()          # Auth tag from the AES-GCM wrapping
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('file', 'shared_with')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.owner.username} → {self.shared_with.username}: {self.file.filename}"
+

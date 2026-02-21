@@ -29,6 +29,12 @@ class UserProfile(models.Model):
     data_passphrase_hash = models.TextField(blank=True, default='')
     is_data_passphrase_set = models.BooleanField(default=False)
 
+    # X25519 asymmetric keypair for file sharing
+    public_key = models.BinaryField(blank=True, null=True)
+    encrypted_private_key = models.BinaryField(blank=True, null=True)
+    private_key_iv = models.BinaryField(blank=True, null=True)
+    private_key_tag = models.BinaryField(blank=True, null=True)
+
     def save(self, *args, **kwargs):
         if not self.salt:
             self.salt = os.urandom(32).hex()

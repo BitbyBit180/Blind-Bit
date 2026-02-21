@@ -19,14 +19,21 @@ from django.db.models import Count, Sum
 from django.contrib import messages
 from django.utils.encoding import escape_uri_path
 
+from django.contrib.auth.models import User
+
 from accounts.models import UserProfile
-from .models import EncryptedFile, FileIndex, EncryptedRecord, RecordIndex, SearchHistory
+from .models import EncryptedFile, FileIndex, EncryptedRecord, RecordIndex, SearchHistory, FileShare
 from .sse_bridge import (
     derive_keys, derive_master_key, encrypt_file_data, decrypt_file_data,
     build_index, generate_tokens_for_search, visualize_encryption,
     preprocess, extract_text, encrypt_record, decrypt_record,
     build_record_index, find_fuzzy_keywords,
     regex_to_search_fragments, verify_regex_match,
+)
+from client.sharing_crypto import (
+    generate_file_key, encrypt_file_key_for_owner, decrypt_file_key_for_owner,
+    wrap_file_key, unwrap_file_key,
+    encrypt_private_key, decrypt_private_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -265,12 +272,16 @@ def upload_file(request):
         if not keywords:
             return JsonResponse({'error': 'No searchable content found'}, status=400)
 
-        # Encrypt file
-        logger.info("Encrypting file data...")
-        file_id, enc_data, enc_time = encrypt_file_data(tmp_path, keys['file_encryption_key'])
+        # Generate per-file AES key and encrypt file with it
+        logger.info("Encrypting file data with per-file key...")
+        per_file_key = generate_file_key()
+        file_id, enc_data, enc_time = encrypt_file_data(tmp_path, per_file_key)
         logger.info(f"File encrypted: {file_id}, time: {enc_time}s")
 
-        # Build index
+        # Wrap the per-file key for owner storage using file_encryption_key
+        enc_fk, fk_iv, fk_tag = encrypt_file_key_for_owner(per_file_key, keys['file_encryption_key'])
+
+        # Build index (still uses owner's HMAC keys)
         logger.info("Building encrypted index...")
         counter = _get_counter(request)
         index_entries, idx_time, tfidf = build_index(
@@ -279,10 +290,13 @@ def upload_file(request):
         )
         logger.info(f"Index built: {len(index_entries)} tokens, time: {idx_time}s")
 
-        # Store in DB
+        # Store in DB with per-file key metadata
         ef = EncryptedFile.objects.create(
             file_id=file_id, filename=uploaded.name,
-            encrypted_data=enc_data, owner=request.user
+            encrypted_data=enc_data, owner=request.user,
+            encrypted_file_key=enc_fk,
+            file_key_iv=fk_iv,
+            file_key_tag=fk_tag,
         )
         
         logger.info(f"Saving {len(index_entries)} tokens to database...")
@@ -557,7 +571,16 @@ def search_api(request):
             # Decrypt preview
             try:
                 ef = EncryptedFile.objects.get(file_id=fid)
-                plain = decrypt_file_data(bytes(ef.encrypted_data), fid, keys['file_encryption_key'])
+                if ef.has_per_file_key:
+                    file_key = decrypt_file_key_for_owner(
+                        bytes(ef.encrypted_file_key),
+                        bytes(ef.file_key_iv),
+                        bytes(ef.file_key_tag),
+                        keys['file_encryption_key'],
+                    )
+                    plain = decrypt_file_data(bytes(ef.encrypted_data), fid, file_key)
+                else:
+                    plain = decrypt_file_data(bytes(ef.encrypted_data), fid, keys['file_encryption_key'])
                 ext = os.path.splitext(fname or '')[1].lower()
                 if ext == '.pdf':
                     tmp_pdf_path = None
@@ -720,12 +743,49 @@ def download_file(request, file_id):
         messages.error(request, 'Vault key is unavailable.')
         return redirect('files')
 
-    ef = get_object_or_404(EncryptedFile, file_id=file_id, owner=request.user)
-    try:
-        plaintext = decrypt_file_data(bytes(ef.encrypted_data), file_id, keys['file_encryption_key'])
-    except Exception as e:
-        messages.error(request, f'Decryption failed: {e}')
-        return redirect('files')
+    mk = base64.b64decode(request.session['_mk'])
+
+    # Check if this is a shared file (recipient downloading)
+    share = FileShare.objects.filter(file__file_id=file_id, shared_with=request.user).first()
+    if share:
+        ef = share.file
+        try:
+            profile = request.user.profile
+            priv_key = decrypt_private_key(
+                bytes(profile.encrypted_private_key),
+                bytes(profile.private_key_iv),
+                bytes(profile.private_key_tag),
+                mk,
+            )
+            file_key = unwrap_file_key(
+                bytes(share.wrapped_key),
+                bytes(share.ephemeral_public),
+                bytes(share.wrapped_iv),
+                bytes(share.wrapped_tag),
+                priv_key,
+            )
+            plaintext = decrypt_file_data(bytes(ef.encrypted_data), file_id, file_key)
+        except Exception as e:
+            messages.error(request, f'Decryption of shared file failed: {e}')
+            return redirect('shared_with_me')
+    else:
+        ef = get_object_or_404(EncryptedFile, file_id=file_id, owner=request.user)
+        try:
+            if ef.has_per_file_key:
+                # New-style: unwrap per-file key, then decrypt
+                file_key = decrypt_file_key_for_owner(
+                    bytes(ef.encrypted_file_key),
+                    bytes(ef.file_key_iv),
+                    bytes(ef.file_key_tag),
+                    keys['file_encryption_key'],
+                )
+                plaintext = decrypt_file_data(bytes(ef.encrypted_data), file_id, file_key)
+            else:
+                # Legacy: decrypt with master-derived key directly
+                plaintext = decrypt_file_data(bytes(ef.encrypted_data), file_id, keys['file_encryption_key'])
+        except Exception as e:
+            messages.error(request, f'Decryption failed: {e}')
+            return redirect('files')
 
     response = HttpResponse(plaintext, content_type='application/octet-stream')
     # Fix header injection and ensure non-ascii filenames work
@@ -868,3 +928,175 @@ def visualizer_api(request):
 def analytics_view(request):
     searches = SearchHistory.objects.filter(user=request.user)[:30]
     return render(request, 'drive/analytics.html', {'searches': searches})
+
+
+# ---------------------------------------------------------------------------
+# File Sharing Endpoints
+# ---------------------------------------------------------------------------
+
+@login_required
+def get_user_public_key(request, username):
+    """Fetch a user's X25519 public key for key wrapping."""
+    try:
+        target_user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+
+    profile = UserProfile.objects.filter(user=target_user).first()
+    if not profile or not profile.public_key:
+        return JsonResponse({'error': 'User has no sharing key pair'}, status=404)
+
+    return JsonResponse({
+        'username': target_user.username,
+        'public_key': base64.b64encode(bytes(profile.public_key)).decode(),
+    })
+
+
+@login_required
+@require_POST
+def share_file(request):
+    """Owner shares a file with another user by uploading the wrapped file key."""
+    keys = _get_keys(request)
+    if not keys:
+        return JsonResponse({'error': '2FA required'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    file_id = data.get('file_id', '').strip()
+    target_username = data.get('target_username', '').strip()
+
+    if not file_id or not target_username:
+        return JsonResponse({'error': 'file_id and target_username are required'}, status=400)
+
+    if target_username == request.user.username:
+        return JsonResponse({'error': 'Cannot share a file with yourself'}, status=400)
+
+    # Verify ownership
+    ef = EncryptedFile.objects.filter(file_id=file_id, owner=request.user).first()
+    if not ef:
+        return JsonResponse({'error': 'File not found or not owned by you'}, status=404)
+
+    if not ef.has_per_file_key:
+        return JsonResponse({
+            'error': 'This file uses legacy encryption and cannot be shared. Please re-upload it.'
+        }, status=400)
+
+    # Fetch target user
+    try:
+        target_user = User.objects.get(username=target_username)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Target user not found'}, status=404)
+
+    target_profile = UserProfile.objects.filter(user=target_user).first()
+    if not target_profile or not target_profile.public_key:
+        return JsonResponse({'error': 'Target user has no sharing key pair'}, status=404)
+
+    # Check for existing share
+    if FileShare.objects.filter(file=ef, shared_with=target_user).exists():
+        return JsonResponse({'error': 'File is already shared with this user'}, status=409)
+
+    # Unwrap the per-file key for the owner
+    try:
+        file_key = decrypt_file_key_for_owner(
+            bytes(ef.encrypted_file_key),
+            bytes(ef.file_key_iv),
+            bytes(ef.file_key_tag),
+            keys['file_encryption_key'],
+        )
+    except Exception as e:
+        logger.error(f"Failed to unwrap file key for {file_id}: {type(e).__name__}: {e}")
+        return JsonResponse({'error': f'Failed to unwrap file key: {type(e).__name__}'}, status=500)
+
+    # Wrap the file key for the recipient
+    try:
+        wrapped, ephemeral_pub, iv, tag = wrap_file_key(
+            file_key, bytes(target_profile.public_key)
+        )
+    except Exception:
+        return JsonResponse({'error': 'Failed to wrap file key for recipient'}, status=500)
+
+    FileShare.objects.create(
+        file=ef,
+        owner=request.user,
+        shared_with=target_user,
+        wrapped_key=wrapped,
+        ephemeral_public=ephemeral_pub,
+        wrapped_iv=iv,
+        wrapped_tag=tag,
+    )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'File shared with {target_username}',
+        'file_id': file_id,
+        'shared_with': target_username,
+    })
+
+
+@login_required
+def get_shared_key(request, file_id):
+    """Recipient fetches their wrapped key for a shared file."""
+    share = FileShare.objects.filter(
+        file__file_id=file_id, shared_with=request.user
+    ).first()
+
+    if not share:
+        return JsonResponse({'error': 'No share found'}, status=404)
+
+    return JsonResponse({
+        'file_id': file_id,
+        'wrapped_key': base64.b64encode(bytes(share.wrapped_key)).decode(),
+        'ephemeral_public': base64.b64encode(bytes(share.ephemeral_public)).decode(),
+        'iv': base64.b64encode(bytes(share.wrapped_iv)).decode(),
+        'tag': base64.b64encode(bytes(share.wrapped_tag)).decode(),
+        'owner': share.owner.username,
+        'filename': share.file.filename,
+    })
+
+
+@login_required
+def shared_with_me_view(request):
+    """Page listing files shared with the current user."""
+    shares = FileShare.objects.filter(shared_with=request.user).select_related('file', 'owner')
+    return render(request, 'drive/shared.html', {'shares': shares})
+
+
+@login_required
+@require_POST
+def revoke_share(request, file_id, username):
+    """Owner revokes a file share."""
+    keys = _get_keys(request)
+    if not keys:
+        return JsonResponse({'error': '2FA required'}, status=403)
+
+    share = FileShare.objects.filter(
+        file__file_id=file_id,
+        owner=request.user,
+        shared_with__username=username,
+    ).first()
+
+    if not share:
+        return JsonResponse({'error': 'Share not found'}, status=404)
+
+    share.delete()
+    return JsonResponse({'success': True, 'message': f'Share revoked for {username}'})
+
+
+@login_required
+def file_shares_list(request, file_id):
+    """List all users a file is shared with (owner only)."""
+    ef = get_object_or_404(EncryptedFile, file_id=file_id, owner=request.user)
+    shares = FileShare.objects.filter(file=ef).select_related('shared_with')
+    return JsonResponse({
+        'file_id': file_id,
+        'shares': [
+            {
+                'username': s.shared_with.username,
+                'shared_at': s.created_at.isoformat(),
+            }
+            for s in shares
+        ],
+    })
