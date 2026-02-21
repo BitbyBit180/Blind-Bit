@@ -44,9 +44,9 @@ def _auth_context(**kwargs) -> dict:
 
 def google_signin_start_view(request):
     if not bool(getattr(settings, 'GOOGLE_OAUTH_AVAILABLE', False)):
-        messages.error(
+        messages.warning(
             request,
-            'Google sign-in is not enabled on this server yet. Install dependencies and restart.',
+            'Google sign-in is currently unavailable. Please continue with username and password.',
         )
         return redirect('login')
     return redirect('/accounts/google/login/')
