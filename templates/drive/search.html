@@ -276,7 +276,7 @@
 
     function highlightText(text, query) {
         if (!text || !query) return escHtml(text);
-        const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+        const words = extractHighlightTerms(query);
         let html = escHtml(text);
         words.forEach(w => {
             const re = new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
