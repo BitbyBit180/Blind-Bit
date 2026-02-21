@@ -230,10 +230,12 @@ def _query_terms_for_preview(query: str):
     return terms
 
 
-def _preview_around_match(full_text: str, terms, width: int = 400) -> str:
+def _preview_around_match(full_text: str, terms, width: int | None = 400) -> str:
     """Return a preview centered around the first query-term match."""
     if not full_text:
         return ''
+    if width is None or width <= 0:
+        return full_text
     if not terms:
         return full_text[:width]
 
