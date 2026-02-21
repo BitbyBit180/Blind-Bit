@@ -85,6 +85,25 @@ class AccountPolicyTests(TestCase):
         # Jumps straight to dashboard
         self.assertRedirects(response3, reverse('dashboard'))
 
+    def test_remember_device_cookie_is_not_secure_over_http(self):
+        _, profile = self._create_2fa_user()
+        code = pyotp.TOTP(profile.get_totp_secret()).now()
+
+        response = self.client.post(reverse('login'), {
+            'username': 'alice',
+            'password': 'StrongPassword123'
+        })
+        self.assertRedirects(response, reverse('verify_2fa'))
+
+        response2 = self.client.post(reverse('verify_2fa'), {
+            'totp_code': code,
+            'remember_device': 'on'
+        })
+        self.assertRedirects(response2, reverse('dashboard'))
+        cookie = response2.cookies.get('trusted_device_2fa')
+        self.assertIsNotNone(cookie)
+        self.assertEqual(cookie['secure'], '')
+
     def test_login_accepts_and_consumes_recovery_code(self):
         _, profile = self._create_2fa_user()
         recovery_codes = profile.generate_recovery_codes()
