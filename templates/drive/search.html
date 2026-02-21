@@ -286,7 +286,21 @@
     }
 
     function extractHighlightTerms(query) {
-        return query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+        const parts = query
+            .toLowerCase()
+            .split(/\s+/)
+            .map(p => p.trim())
+            .filter(Boolean);
+        const terms = [];
+        parts.forEach(part => {
+            let t = part;
+            if (t.startsWith('+') || t.startsWith('-')) t = t.slice(1);
+            t = t.replace(/^"+|"+$/g, '');
+            t = t.replace(/\*/g, '');
+            t = t.replace(/[^\p{L}\p{N}_-]/gu, '');
+            if (t.length >= 2) terms.push(t);
+        });
+        return Array.from(new Set(terms));
     }
 
     function escHtml(s) {
