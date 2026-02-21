@@ -285,6 +285,10 @@
         return html;
     }
 
+    function extractHighlightTerms(query) {
+        return query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+    }
+
     function escHtml(s) {
         if (!s) return '';
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
