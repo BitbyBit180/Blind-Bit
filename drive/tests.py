@@ -65,6 +65,24 @@ class DriveSecurityAndSearchTests(TestCase):
         session = self.client.session
         self.assertTrue(bool(session.get('_dek')))
 
+    def test_upload_page_recovers_master_key_from_cached_passphrase(self):
+        profile = UserProfile.objects.create(user=self.user, is_2fa_enabled=True)
+        profile.generate_totp_secret()
+        profile.set_data_passphrase('VeryStrongPass123')
+
+        session = self.client.session
+        session['_2fa_verified'] = True
+        session['is_2fa_verified'] = True
+        session['_vault_passphrase'] = 'VeryStrongPass123'
+        session.pop('_mk', None)
+        session.save()
+
+        response = self.client.get(reverse('upload_page'))
+        self.assertEqual(response.status_code, 200)
+
+        session = self.client.session
+        self.assertTrue(bool(session.get('_mk')))
+
     @patch('drive.views.derive_keys', return_value={
         'file_encryption_key': b'k' * 32,
         'hmac_key': b'h' * 32,

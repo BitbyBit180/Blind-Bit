@@ -12,7 +12,7 @@
 </head>
 
 <body>
-    {% if user.is_authenticated %}
+    {% if user.is_authenticated and not hide_sidebar %}
     <div class="app-layout">
         <!-- Sidebar -->
         <aside class="sidebar">

@@ -5,8 +5,10 @@ Security-hardened configuration.
 import os
 from pathlib import Path
 from decouple import config, Csv
+from blindbit_web.compat import patch_django_template_context_copy
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+patch_django_template_context_copy()
 
 # --- Core Security ---
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='dev-only-insecure-secret-key')

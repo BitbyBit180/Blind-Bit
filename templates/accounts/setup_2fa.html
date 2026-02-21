@@ -1,9 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Setup 2FA{% endblock %}
-{% block page_title %}Two-Factor Authentication{% endblock %}
 
-{% block content %}
+{% block auth_content %}
 <div style="max-width: 640px; margin: 0 auto;">
     <div class="card">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -51,20 +50,7 @@
                     <p class="step-label">Or enter this secret manually:</p>
                     <div class="secret-code" id="secret-code">{{ secret }}</div>
                     <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">
-                        <button type="button" class="btn btn-ghost btn-sm"
-                            onclick="navigator.clipboard.writeText('{{ secret }}'); this.textContent='<svg
-  xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
->
-  <path d="M20 6 9 17l-5-5" />
-</svg> Copied!'">
+                        <button type="button" class="btn btn-ghost btn-sm" id="copy-secret-btn">
                             Copy Secret
                         </button>
                         <form method="post" style="display:inline;">
@@ -96,7 +82,35 @@
                     If your authenticator app is lost, recovery codes are the only backup sign-in path.
                 </div>
             </div>
+            <form method="post" action="{% url 'logout' %}" style="margin-top:16px;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-full">Logout</button>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const btn = document.getElementById('copy-secret-btn');
+        if (!btn) return;
+        const originalText = btn.textContent;
+        btn.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText('{{ secret|escapejs }}');
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            } catch (e) {
+                btn.textContent = 'Copy failed';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            }
+        });
+    })();
+</script>
 {% endblock %}

@@ -214,7 +214,7 @@ def upload_page(request):
         return redirect('verify_2fa')
     
     # Ensure vault is unlocked
-    if not request.session.get('_mk'):
+    if not request.session.get('_mk') and not _restore_master_key_from_cached_passphrase(request):
         messages.warning(request, 'Please unlock your vault to upload files.')
         return redirect('unlock_data')
         
@@ -336,7 +336,7 @@ def upload_file(request):
 
 @login_required
 def search_view(request):
-    if not request.session.get('_mk'):
+    if not request.session.get('_mk') and not _restore_master_key_from_cached_passphrase(request):
         messages.warning(request, 'Please unlock your vault to search.')
         return redirect('unlock_data')
     return render(request, 'drive/search.html')
@@ -738,7 +738,7 @@ def search_api(request):
 
 @login_required
 def download_file(request, file_id):
-    if not request.session.get('_mk'):
+    if not request.session.get('_mk') and not _restore_master_key_from_cached_passphrase(request):
         messages.warning(request, 'Please unlock your vault to download files.')
         return redirect('unlock_data')
         
@@ -810,7 +810,7 @@ def delete_file(request, file_id):
 
 @login_required
 def records_view(request):
-    if not request.session.get('_mk'):
+    if not request.session.get('_mk') and not _restore_master_key_from_cached_passphrase(request):
         messages.warning(request, 'Please unlock your vault to view records.')
         return redirect('unlock_data')
     records = EncryptedRecord.objects.filter(owner=request.user)

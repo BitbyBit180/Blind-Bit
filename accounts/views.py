@@ -187,6 +187,19 @@ def _auth_redirect_target(profile, has_mk: bool, used_recovery_code: bool = Fals
     return 'dashboard'
 
 
+def _vault_unlock_required_message(request, user):
+    if user.has_usable_password():
+        messages.warning(
+            request,
+            'Google sign-in succeeded, but your vault is locked. Unlock it with your data passphrase/password.',
+        )
+    else:
+        messages.warning(
+            request,
+            'Vault key is not active for this session. Please unlock your vault.',
+        )
+
+
 def register_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -313,12 +326,10 @@ def post_auth_view(request):
         if _auto_unlock_for_social(request, request.user, profile):
             pass
         else:
-            messages.warning(
-                request,
-                'Vault key is not active for this session. You can still access the dashboard.',
-            )
+            _vault_unlock_required_message(request, request.user)
+            return redirect('unlock_data')
 
-    return redirect('dashboard')
+    return redirect(_auth_redirect_target(profile, has_mk=True))
 
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
@@ -347,26 +358,26 @@ def verify_2fa_view(request):
 
         if _is_locked('otp_user', otp_user_key) or _is_locked('otp_ip', ip):
             messages.error(request, 'Too many 2FA attempts. Try again in 15 minutes.')
-            return render(request, 'accounts/verify_2fa.html')
+            return render(request, 'accounts/verify_2fa.html', {'hide_sidebar': True})
 
         if not totp_code and not recovery_code:
             _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
             _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
             messages.error(request, 'Enter either a 2FA code or a recovery code.')
-            return render(request, 'accounts/verify_2fa.html')
+            return render(request, 'accounts/verify_2fa.html', {'hide_sidebar': True})
 
         if totp_code and not profile.verify_totp(totp_code):
             _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
             _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
             messages.error(request, 'Invalid 2FA code.')
-            return render(request, 'accounts/verify_2fa.html')
+            return render(request, 'accounts/verify_2fa.html', {'hide_sidebar': True})
 
         if (not totp_code) and recovery_code:
             if not profile.verify_and_consume_recovery_code(recovery_code):
                 _register_failure('otp_user', otp_user_key, MAX_OTP_FAILS_USER)
                 _register_failure('otp_ip', ip, MAX_OTP_FAILS_IP)
                 messages.error(request, 'Invalid recovery code.')
-                return render(request, 'accounts/verify_2fa.html')
+                return render(request, 'accounts/verify_2fa.html', {'hide_sidebar': True})
             used_recovery_code = True
             request.session['_needs_authenticator_reenroll'] = True
             messages.warning(
@@ -391,7 +402,11 @@ def verify_2fa_view(request):
             has_mk = True
         request.session.pop('pre_2fa_password', None)
 
-        response = redirect(_auth_redirect_target(profile, has_mk, used_recovery_code))
+        if not has_mk and not used_recovery_code:
+            _vault_unlock_required_message(request, user)
+            response = redirect('unlock_data')
+        else:
+            response = redirect(_auth_redirect_target(profile, has_mk, used_recovery_code))
 
         if used_recovery_code:
             _clear_trusted_device_cookie(response)
@@ -402,7 +417,7 @@ def verify_2fa_view(request):
 
         return response
 
-    return render(request, 'accounts/verify_2fa.html')
+    return render(request, 'accounts/verify_2fa.html', {'hide_sidebar': True})
 
 
 @login_required
@@ -460,8 +475,8 @@ def setup_2fa_view(request):
             _clear_failures('otp_setup_ip', ip)
             codes = profile.generate_recovery_codes()
             request.session['_fresh_recovery_codes'] = codes
-            messages.success(request, '2FA verified. Save your new recovery codes.')
-            return redirect('recovery_codes')
+            messages.success(request, '2FA verified. You are now protected. Save your recovery codes from the dashboard.')
+            return redirect('dashboard')
 
         _register_failure('otp_setup_user', otp_user_key, MAX_OTP_FAILS_USER)
         _register_failure('otp_setup_ip', ip, MAX_OTP_FAILS_IP)
@@ -477,6 +492,7 @@ def setup_2fa_view(request):
         'qr_code': qr_b64,
         'secret': secret,
         'is_reenroll': is_reenroll,
+        'hide_sidebar': True,
     })
 
 

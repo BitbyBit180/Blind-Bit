@@ -58,7 +58,10 @@
     </form>
 
     <div class="auth-footer">
-        <p><a href="{% url 'login' %}">&larr; Back to Login</a></p>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-full">Logout</button>
+        </form>
     </div>
 </div>
 {% endblock %}

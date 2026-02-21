@@ -186,7 +186,7 @@ class AccountPolicyTests(TestCase):
         self.assertEqual(response4.status_code, 200)
         self.assertContains(response4, 'Invalid recovery code.')
 
-    def test_setup_2fa_shows_recovery_codes_after_verify(self):
+    def test_setup_2fa_redirects_to_dashboard_after_verify(self):
         user = User.objects.create_user(username='sam', password='StrongPassword123')
         profile = UserProfile.objects.create(user=user, is_2fa_enabled=False)
         profile.generate_totp_secret()
@@ -197,8 +197,9 @@ class AccountPolicyTests(TestCase):
             data={'totp_code': pyotp.TOTP(profile.get_totp_secret()).now()},
         )
         self.assertEqual(verify.status_code, 302)
-        self.assertEqual(verify.url, reverse('recovery_codes'))
+        self.assertEqual(verify.url, reverse('dashboard'))
 
+        # Recovery codes are still available on-demand after the redirect.
         page = self.client.get(reverse('recovery_codes'))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'Recovery Codes')
@@ -238,6 +239,42 @@ class AccountPolicyTests(TestCase):
 
         good = self.client.post(reverse('unlock_data'), {'data_passphrase': 'VaultPassphrase123'})
         self.assertRedirects(good, reverse('dashboard'))
+
+    def test_post_auth_redirects_to_unlock_for_social_linked_password_user(self):
+        user = User.objects.create_user(
+            username='google-linked',
+            email='google-linked@example.com',
+            password='StrongPassword123',
+        )
+        profile = UserProfile.objects.create(user=user, is_2fa_enabled=False)
+        profile.generate_totp_secret()
+
+        self.client.force_login(user)
+        session = self.client.session
+        session.pop('_mk', None)
+        session.pop('_vault_passphrase', None)
+        session['_2fa_verified'] = True
+        session['is_2fa_verified'] = True
+        session.save()
+
+        response = self.client.get(reverse('post_auth'))
+        self.assertRedirects(response, reverse('unlock_data'))
+
+    def test_verify_2fa_redirects_to_unlock_when_no_passphrase_available(self):
+        user = User.objects.create_user(username='otp-user', password='StrongPassword123')
+        profile = UserProfile.objects.create(user=user, is_2fa_enabled=True)
+        profile.generate_totp_secret()
+
+        session = self.client.session
+        session['pending_2fa_uid'] = user.id
+        session.pop('pre_2fa_password', None)
+        session.pop('_mk', None)
+        session.save()
+
+        response = self.client.post(reverse('verify_2fa'), {
+            'totp_code': pyotp.TOTP(profile.get_totp_secret()).now(),
+        })
+        self.assertRedirects(response, reverse('unlock_data'))
 
 
 class DEKTests(TestCase):
