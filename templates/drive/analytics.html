@@ -4,7 +4,12 @@
 
 {% block content %}
 <div class="card">
-    <h3 class="card-title">Search History</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h3 class="card-title" style="margin-bottom:0;">Search History</h3>
+        {% if searches %}
+        <span class="chip chip-default">{{ searches|length }} searches</span>
+        {% endif %}
+    </div>
     {% if searches %}
     <table class="data-table">
         <thead>
@@ -21,22 +26,25 @@
         <tbody>
             {% for s in searches %}
             <tr>
-                <td>{{ forloop.counter }}</td>
+                <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
                 <td><span class="chip chip-{{ s.search_type }}">{{ s.search_type }}</span></td>
                 <td>{{ s.logic_mode }}</td>
-                <td>{{ s.token_count }}</td>
-                <td>{{ s.result_count }}</td>
-                <td>{{ s.duration_ms|floatformat:1 }}</td>
-                <td>{{ s.created_at|timesince }} ago</td>
+                <td style="font-weight:600;">{{ s.token_count }}</td>
+                <td
+                    style="font-weight:600;color:{% if s.result_count > 0 %}var(--success){% else %}var(--text-muted){% endif %};">
+                    {{ s.result_count }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">{{ s.duration_ms|floatformat:1 }}
+                </td>
+                <td style="color:var(--text-muted);font-size:13px;">{{ s.created_at|timesince }} ago</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
     <div class="empty-state">
-        <div class="empty-icon">📈</div>
-        <h3>No searches yet</h3>
-        <p>Search for encrypted data to see analytics here</p>
+        <span class="empty-icon">📈</span>
+        <div class="empty-title">No searches yet</div>
+        <p class="empty-desc">Search your encrypted data to see query analytics here</p>
     </div>
     {% endif %}
 </div>

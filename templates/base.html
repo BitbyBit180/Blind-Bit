@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -23,32 +23,44 @@
             <nav class="sidebar-nav">
                 <a href="{% url 'dashboard' %}"
                     class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    </span>
                     <span>Dashboard</span>
                 </a>
                 <a href="{% url 'files' %}"
                     class="nav-item {% if request.resolver_match.url_name == 'files' %}active{% endif %}">
-                    <span class="nav-icon">📁</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 3h8l2 3h8v15H3z"/></svg>
+                    </span>
                     <span>My Files</span>
                 </a>
                 <a href="{% url 'search' %}"
                     class="nav-item {% if request.resolver_match.url_name == 'search' %}active{% endif %}">
-                    <span class="nav-icon">🔍</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                    </span>
                     <span>Search</span>
                 </a>
                 <a href="{% url 'records' %}"
                     class="nav-item {% if request.resolver_match.url_name == 'records' %}active{% endif %}">
-                    <span class="nav-icon">📝</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    </span>
                     <span>Records</span>
                 </a>
                 <a href="{% url 'visualizer' %}"
                     class="nav-item {% if request.resolver_match.url_name == 'visualizer' %}active{% endif %}">
-                    <span class="nav-icon">⚡</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </span>
                     <span>Visualizer</span>
                 </a>
                 <a href="{% url 'analytics' %}"
                     class="nav-item {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
-                    <span class="nav-icon">📈</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </span>
                     <span>Analytics</span>
                 </a>
             </nav>
@@ -58,9 +70,9 @@
                     <div class="user-details">
                         <span class="user-name">{{ user.username }}</span>
                         {% if request.session.is_2fa_verified %}
-                        <span class="user-badge">2FA ✓</span>
+                        <span class="user-badge">2FA ✓ Verified</span>
                         {% else %}
-                        <span class="user-badge">2FA Pending</span>
+                        <span class="user-badge" style="color:var(--warn);">2FA Pending</span>
                         {% endif %}
                     </div>
                 </div>
@@ -68,7 +80,9 @@
                     {% csrf_token %}
                     <button type="submit" class="nav-item logout"
                         style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; width:100%; text-align:left;">
-                        <span class="nav-icon">🚪</span>
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        </span>
                         <span>Logout</span>
                     </button>
                 </form>
@@ -99,6 +113,13 @@
     </div>
     {% else %}
     <div class="auth-layout">
+        <!-- Decorative orange glow -->
+        <div class="hero-glow"></div>
+        <!-- Decorative star motif -->
+        <svg class="hero-star" viewBox="0 0 36 36" fill="none">
+            <path d="M18 0 C18 0 19.5 8 22 12 C26 16 36 18 36 18 C36 18 26 19.5 22 24 C19.5 28 18 36 18 36 C18 36 16.5 28 14 24 C10 19.5 0 18 0 18 C0 18 10 16 14 12 C16.5 8 18 0 18 0Z" fill="white" opacity="0.75"/>
+        </svg>
+
         {% if messages %}
         <div class="messages">
             {% for message in messages %}

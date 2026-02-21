@@ -6,262 +6,101 @@
 {% block content %}
 <div class="card search-container">
     <div class="search-bar-wrapper">
-        <input type="text" id="search-input" class="search-input-lg" placeholder="Search encrypted files & records..."
+        <input type="text" id="search-input" class="search-input" placeholder="Search encrypted files &amp; records..."
             autocomplete="off" autofocus>
-        <button class="btn btn-primary btn-lg" onclick="doSearch()">
-            <span class="icon">🔍</span> Search
+        <button class="btn btn-primary" onclick="doSearch()" style="padding:12px 24px;font-size:15px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.35-4.35" />
+            </svg>
+            Search
         </button>
     </div>
 
-    <div class="search-options-toggle">
-        <button class="btn-text" onclick="toggleAdvanced()" id="adv-toggle">
-            <span>⚙️ Advanced Filters</span>
-            <span class="arrow">▼</span>
+    <div class="search-options-toggle" style="margin-top:10px;">
+        <button onclick="toggleAdvanced()" id="adv-toggle"
+            style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:4px 0;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+                <line x1="11" y1="18" x2="13" y2="18" />
+            </svg>
+            Advanced Filters
+            <span class="arrow" style="display:inline-block;transition:transform 0.2s;font-size:10px;">▼</span>
         </button>
     </div>
 
-    <div id="advanced-filters" class="advanced-filters" style="display:none">
-        <div class="filter-group">
-            <label>Search Logic:</label>
-            <div class="logic-toggle">
+    <div id="advanced-filters"
+        style="display:none;margin-top:14px;padding:18px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <div class="filter-group" style="margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <label
+                style="color:var(--text-dim);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;min-width:80px;">Logic:</label>
+            <div class="logic-toggle" style="margin-left:0;">
                 <button class="logic-btn active" data-logic="AND" title="Matches ALL terms (Default)">AND</button>
                 <button class="logic-btn" data-logic="OR" title="Matches ANY term">OR</button>
             </div>
-            <small class="logic-help">
-                <strong>AND</strong> = narrower search (all words required). Example: <code>invoice AND paid</code>.<br>
-                <strong>OR</strong> = broader search (any word can match). Example: <code>invoice OR receipt</code>.
+            <small style="color:var(--text-muted);font-size:12px;flex-basis:100%;margin-left:94px;line-height:1.5;">
+                <strong style="color:var(--text-dim);">AND</strong> = narrower (all words required) &nbsp;·&nbsp;
+                <strong style="color:var(--text-dim);">OR</strong> = broader (any word can match)
             </small>
         </div>
-        <div class="filter-group">
-            <label>Match Mode:</label>
-            <div class="search-modes">
-                <button class="mode-chip active" data-mode="exact" data-label="Exact" data-desc="Finds direct keyword matches." data-example="Example: invoice paid" title="Recommended default mode">Exact (Recommended)</button>
-                <button class="mode-chip" data-mode="substring" data-label="Contains" data-desc="Matches when your text appears inside larger words or strings." data-example="Example: plan finds planning" title="Contains part of a word">Contains</button>
-                <button class="mode-chip" data-mode="phrase" data-label="Phrase" data-desc="Looks for words together in order as a phrase." data-example="Example: \"annual report\"">Phrase</button>
-                <button class="mode-chip" data-mode="wildcard" data-label="Wildcard" data-desc="Use * as a placeholder for unknown characters." data-example="Examples: inv* , *report , fin*2025">Wildcard (*)</button>
-                <button class="mode-chip" data-mode="fuzzy" data-label="Fuzzy" data-desc="Finds close spellings and small typos." data-example="Example: reciept can match receipt">Fuzzy (typos)</button>
-                <button class="mode-chip regex" data-mode="regex" data-label="Regex" data-desc="Advanced pattern matching using regular expressions." data-example="Example: inv(ice|oice)\\s+\\d+" title="Advanced users">Regex (Advanced)</button>
+        <div class="filter-group" style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+            <label
+                style="color:var(--text-dim);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;min-width:80px;padding-top:6px;">Mode:</label>
+            <div style="flex:1;min-width:0;">
+                <div class="search-modes" style="margin-bottom:8px;">
+                    <button class="mode-chip active" data-mode="exact" data-label="Exact"
+                        data-desc="Finds direct keyword matches." data-example="Example: invoice paid"
+                        title="Recommended default mode">Exact</button>
+                    <button class="mode-chip" data-mode="substring" data-label="Contains"
+                        data-desc="Matches when your text appears inside larger words."
+                        data-example="Example: plan finds planning" title="Contains part of a word">Contains</button>
+                    <button class="mode-chip" data-mode="phrase" data-label="Phrase"
+                        data-desc="Looks for words together in order as a phrase."
+                        data-example='Example: "annual report"'>Phrase</button>
+                    <button class="mode-chip" data-mode="wildcard" data-label="Wildcard"
+                        data-desc="Use * as a placeholder for unknown characters."
+                        data-example="Examples: inv* , *report , fin*2025">Wildcard (*)</button>
+                    <button class="mode-chip" data-mode="fuzzy" data-label="Fuzzy"
+                        data-desc="Finds close spellings and small typos."
+                        data-example="Example: reciept can match receipt">Fuzzy</button>
+                    <button class="mode-chip regex" data-mode="regex" data-label="Regex"
+                        data-desc="Advanced pattern matching using regular expressions."
+                        data-example="Example: inv(ice|oice)\s+\d+" title="Advanced users">Regex</button>
+                </div>
+                <div id="mode-explainer"
+                    style="font-size:12px;color:var(--text-dim);padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);line-height:1.6;"
+                    aria-live="polite"></div>
             </div>
-            <div id="mode-explainer" class="mode-explainer" aria-live="polite"></div>
         </div>
-        <div class="search-tips">
+        <div class="search-tips" style="margin-top:14px;margin-bottom:0;">
             <small>
-                <strong>Tips:</strong> Use <code>+term</code> to always require, <code>-term</code> to always exclude.
-                Unmarked terms follow the selected <strong>AND/OR</strong> logic. Default is <strong>AND</strong>.
+                <strong>Tips:</strong> Use <code
+                    style="background:var(--border);padding:1px 4px;border-radius:3px;">+term</code> to always require,
+                <code style="background:var(--border);padding:1px 4px;border-radius:3px;">-term</code> to always
+                exclude.
+                Unmarked terms follow the selected AND/OR logic.
             </small>
         </div>
     </div>
 </div>
 
 <!-- Status -->
-<div id="search-status" class="search-status" style="display:none"></div>
+<div id="search-status"
+    style="display:none;padding:12px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;margin-bottom:14px;">
+</div>
 
 <!-- Regex Analysis -->
-<div id="regex-info" class="card regex-info" style="display:none">
-    <h4>Regex Analysis</h4>
+<div id="regex-info" class="card" style="display:none;margin-bottom:14px;">
+    <h4 style="font-family:'DM Serif Display',serif;font-size:15px;font-weight:400;margin-bottom:10px;">Regex Analysis
+    </h4>
     <div id="regex-details"></div>
 </div>
 
 <!-- Results -->
 <div id="search-results" class="results-area"></div>
-
-<style>
-    /* Inline styles for search improvements */
-    .search-container {
-        padding: 2rem;
-    }
-
-    .search-input-lg {
-        flex: 1;
-        padding: 12px 16px;
-        font-size: 1.1rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        color: #fff;
-        outline: none;
-        margin-right: 10px;
-        transition: border-color 0.2s;
-    }
-
-    .search-input-lg:focus {
-        border-color: var(--primary);
-    }
-
-    .btn-lg {
-        padding: 12px 24px;
-        font-size: 1rem;
-    }
-
-    .search-options-toggle {
-        margin-top: 10px;
-        text-align: left;
-    }
-
-    .btn-text {
-        background: none;
-        border: none;
-        color: #aaa;
-        cursor: pointer;
-        font-size: 0.9rem;
-        padding: 5px 0;
-    }
-
-    .btn-text:hover {
-        color: #fff;
-    }
-
-    .arrow {
-        display: inline-block;
-        transition: transform 0.2s;
-        font-size: 0.8rem;
-        margin-left: 5px;
-    }
-
-    .arrow.open {
-        transform: rotate(180deg);
-    }
-
-    .advanced-filters {
-        margin-top: 15px;
-        padding: 15px;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .filter-group {
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .filter-group label {
-        color: #888;
-        font-size: 0.9rem;
-        min-width: 80px;
-    }
-
-    .logic-help {
-        color: #98a3c7;
-        font-size: 0.8rem;
-        line-height: 1.45;
-        flex-basis: 100%;
-        margin-left: 95px;
-    }
-
-    @media (max-width: 720px) {
-        .logic-help {
-            margin-left: 0;
-        }
-    }
-
-    .mode-explainer {
-        color: #9aa7cf;
-        font-size: 0.82rem;
-        line-height: 1.45;
-        flex-basis: 100%;
-        margin-left: 95px;
-        margin-top: 2px;
-        padding: 8px 10px;
-        border: 1px solid rgba(115, 140, 200, 0.25);
-        border-radius: 8px;
-        background: rgba(35, 47, 84, 0.28);
-    }
-
-    .mode-explainer .mode-title {
-        color: #d2dcff;
-        font-weight: 600;
-        margin-right: 6px;
-    }
-
-    .mode-explainer .mode-example {
-        color: #b8c6f2;
-    }
-
-    @media (max-width: 720px) {
-        .mode-explainer {
-            margin-left: 0;
-        }
-    }
-
-    /* Result Cards */
-    .result-card {
-        background: #1e1e1e;
-        border: 1px solid #333;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-        transition: transform 0.1s, box-shadow 0.1s;
-    }
-
-    .result-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        border-color: #444;
-    }
-
-    .result-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-    }
-
-    .result-badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: bold;
-        margin-right: 10px;
-        text-transform: uppercase;
-    }
-
-    .type-file {
-        background: rgba(52, 152, 219, 0.2);
-        color: #3498db;
-    }
-
-    .type-record {
-        background: rgba(155, 89, 182, 0.2);
-        color: #9b59b6;
-    }
-
-    .result-title {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: #eee;
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .result-meta {
-        font-size: 0.8rem;
-        color: #666;
-        margin-left: 10px;
-    }
-
-    .result-preview {
-        padding: 10px;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 6px;
-        font-family: 'Consolas', monospace;
-        font-size: 0.9rem;
-        color: #ccc;
-        line-height: 1.5;
-    }
-
-    mark {
-        background: rgba(241, 196, 15, 0.3);
-        color: #f1c40f;
-        padding: 0 2px;
-        border-radius: 2px;
-    }
-</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -269,17 +108,17 @@
     const CSRF = '{{ csrf_token }}';
     const SEARCH_API_URL = '{% url "search_api" %}';
     let currentMode = 'exact';
-    let currentLogic = 'AND'; // Default changed to AND
+    let currentLogic = 'AND';
 
     function toggleAdvanced() {
         const pan = document.getElementById('advanced-filters');
         const arrow = document.querySelector('#adv-toggle .arrow');
         if (pan.style.display === 'none') {
             pan.style.display = 'block';
-            arrow.classList.add('open');
+            arrow.style.transform = 'rotate(180deg)';
         } else {
             pan.style.display = 'none';
-            arrow.classList.remove('open');
+            arrow.style.transform = '';
         }
     }
 
@@ -310,13 +149,9 @@
         const label = modeBtn.dataset.label || modeBtn.textContent.trim();
         const desc = modeBtn.dataset.desc || '';
         const example = modeBtn.dataset.example || '';
-        box.innerHTML = `
-            <span class="mode-title">${escHtml(label)}:</span>${escHtml(desc)}
-            ${example ? `<br><span class="mode-example">${escHtml(example)}</span>` : ''}
-        `;
+        box.innerHTML = `<span style="font-weight:600;color:var(--text);">${escHtml(label)}:</span> ${escHtml(desc)}${example ? `<br><span style="color:var(--text-muted);">${escHtml(example)}</span>` : ''}`;
     }
 
-    // Initialize explainer for default active mode.
     renderModeExplainer(document.querySelector('.mode-chip.active'));
 
     async function doSearch() {
@@ -325,9 +160,13 @@
         const status = document.getElementById('search-status');
         const results = document.getElementById('search-results');
         const regexInfo = document.getElementById('regex-info');
-        status.textContent = 'Searching...'; status.style.display = 'block';
-        status.className = 'search-status loading';
-        results.innerHTML = ''; regexInfo.style.display = 'none';
+        status.textContent = 'Searching…';
+        status.style.display = 'block';
+        status.style.background = 'var(--indigo-soft)';
+        status.style.color = 'var(--indigo-dark)';
+        status.style.border = '1px solid rgba(99,102,241,0.2)';
+        results.innerHTML = '';
+        regexInfo.style.display = 'none';
 
         try {
             const res = await fetch(SEARCH_API_URL, {
@@ -336,30 +175,39 @@
                 body: JSON.stringify({ query: q, mode: currentMode, logic: currentLogic })
             });
             const data = await res.json();
-            if (!res.ok || data.error) { status.textContent = data.error || 'Search failed'; status.className = 'search-status error'; return; }
+            if (!res.ok || data.error) {
+                status.textContent = data.error || 'Search failed';
+                status.style.background = 'var(--error-soft)';
+                status.style.color = 'var(--error)';
+                status.style.border = '1px solid rgba(220,38,38,0.2)';
+                return;
+            }
 
             const logicText = currentLogic === 'AND' ? 'matching ALL terms' : 'matching ANY term';
-            status.textContent = `Found ${data.total} result(s) in ${data.search_time}s (${data.search_mode} mode, ${logicText})`;
-            status.className = 'search-status success';
+            status.textContent = `Found ${data.total} result(s) in ${data.search_time}s · ${data.search_mode} mode · ${logicText}`;
+            status.style.background = 'var(--success-soft)';
+            status.style.color = 'var(--success)';
+            status.style.border = '1px solid rgba(22,163,74,0.2)';
 
-            // Show regex analysis
             if (data.regex_info) {
                 regexInfo.style.display = 'block';
                 document.getElementById('regex-details').innerHTML = `
-                <div class="regex-frags">
-                    <span class="label">Literal fragments:</span>
-                    ${data.regex_info.fragments.map(f => `<span class="frag-chip">${escHtml(f)}</span>`).join('')}
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
+                    <span style="color:var(--text-dim);font-size:12px;">Literal fragments:</span>
+                    ${data.regex_info.fragments.map(f => `<span class="chip chip-default">${escHtml(f)}</span>`).join('')}
                 </div>
-                <div class="regex-meta">
+                <div style="display:flex;gap:6px;">
                     <span class="chip chip-${data.regex_info.complexity}">${data.regex_info.complexity}</span>
-                    ${data.regex_info.has_wildcards ? '<span class="chip chip-warn">has wildcards</span>' : ''}
-                </div>
-            `;
+                    ${data.regex_info.has_wildcards ? '<span class="chip chip-wildcard">has wildcards</span>' : ''}
+                </div>`;
             }
 
-            // Render results
             if (data.total === 0) {
-                results.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><h3>No results found</h3><p>Try adjusting your keywords or search mode.</p></div>';
+                results.innerHTML = `<div class="empty-state">
+                    <span class="empty-icon">🔍</span>
+                    <div class="empty-title">No results found</div>
+                    <p class="empty-desc">Try adjusting your keywords or selecting a different search mode.</p>
+                </div>`;
                 return;
             }
 
@@ -367,47 +215,50 @@
                 results.innerHTML += buildFileResult(r, i + 1, q);
             });
             (data.record_results || []).forEach((r, i) => {
-                results.innerHTML += buildRecordResult(r, i + data.file_results.length + 1, q);
+                results.innerHTML += buildRecordResult(r, i + (data.file_results || []).length + 1, q);
             });
 
         } catch (e) {
             status.textContent = 'Search failed: ' + e.message;
-            status.className = 'search-status error';
+            status.style.background = 'var(--error-soft)';
+            status.style.color = 'var(--error)';
         }
     }
 
     function buildFileResult(r, idx, query) {
-        const regexHtml = r.regex_matches && r.regex_matches.length > 0 ?
-            `<div class="regex-matches"><span class="regex-match-label">Regex matches (${r.regex_matches.length}):</span>
-        ${r.regex_matches.map(m => `<div class="regex-match-item"><span class="match-hl">${escHtml(m.match)}</span><span class="match-ctx">${escHtml(m.context)}</span></div>`).join('')}</div>` : '';
+        const regexHtml = r.regex_matches && r.regex_matches.length > 0
+            ? `<div style="margin-top:10px;padding:10px;background:var(--orange-soft);border-radius:var(--radius-sm);font-size:12px;">
+                <span style="color:var(--orange-dark);font-weight:600;">Regex matches (${r.regex_matches.length}):</span>
+                ${r.regex_matches.map(m => `<div style="margin-top:4px;"><span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:3px;">${escHtml(m.match)}</span> <span style="color:var(--text-dim);">${escHtml(m.context)}</span></div>`).join('')}
+               </div>` : '';
 
         return `<div class="result-card">
-        <div class="result-header">
-            <div style="display:flex; align-items:center;">
-                <span class="result-badge type-file">FILE</span>
-                <span class="result-title">${escHtml(r.name)}</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+                    <span class="chip" style="background:var(--indigo-soft);color:var(--indigo-dark);flex-shrink:0;">FILE</span>
+                    <span style="font-weight:600;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.name)}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <span style="font-size:12px;color:var(--text-muted);">Score: ${r.score}</span>
+                    <a href="/download/${r.id}/" class="btn btn-sm btn-ghost-orange">Download</a>
+                </div>
             </div>
-            <div style="display:flex; align-items:center;">
-                <span class="result-meta">Score: ${r.score}</span>
-                <a href="/download/${r.id}/" class="btn btn-sm btn-success" style="margin-left:10px;">Download</a>
-            </div>
-        </div>
-        <div class="result-preview">${highlightText(r.preview, query)}</div>
-        ${regexHtml}
-    </div>`;
+            <div style="padding:12px;background:var(--surface2);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);line-height:1.6;">${highlightText(r.preview, query)}</div>
+            ${regexHtml}
+        </div>`;
     }
 
     function buildRecordResult(r, idx, query) {
         return `<div class="result-card">
-        <div class="result-header">
-            <div style="display:flex; align-items:center;">
-                <span class="result-badge type-record">RECORD</span>
-                <span class="result-title">${escHtml(r.id.substring(0, 8))}...</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="chip" style="background:var(--purple-soft);color:var(--purple);flex-shrink:0;">RECORD</span>
+                    <span style="font-weight:600;font-size:14px;color:var(--text);">${escHtml(r.id.substring(0, 8))}…</span>
+                </div>
+                <span style="font-size:12px;color:var(--text-muted);">Score: ${r.score}</span>
             </div>
-            <span class="result-meta">Score: ${r.score}</span>
-        </div>
-        <div class="result-preview">${highlightText(r.preview, query)}</div>
-    </div>`;
+            <div style="padding:12px;background:var(--surface2);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);line-height:1.6;">${highlightText(r.preview, query)}</div>
+        </div>`;
     }
 
     function highlightText(text, query) {

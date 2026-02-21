@@ -5,41 +5,43 @@
 {% block auth_content %}
 <div class="auth-card">
     <div class="auth-header">
-        <div class="auth-logo">🔐</div>
-        <h1>Two-Factor Authentication</h1>
-        <p class="auth-subtitle">Finalize your sign in</p>
+        <div class="auth-logo">🔒</div>
+        <h1>Two-Factor Auth</h1>
+        <p class="auth-subtitle">One last step to complete sign-in</p>
     </div>
 
     <p class="auth-flow-note">
-        Your account is protected with 2FA. Please enter the code from your authenticator app or use a recovery code.
+        Enter the 6-digit code from your authenticator app, or use a recovery code if you've lost access.
     </p>
 
     <form method="post" action="{% url 'verify_2fa' %}" class="auth-form">
         {% csrf_token %}
         <div class="form-group">
-            <label for="totp_code">2FA Code</label>
-            <input type="text" name="totp_code" id="totp_code" maxlength="6" placeholder="6-digit code"
-                autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" autofocus>
+            <label for="totp_code">Authenticator Code</label>
+            <input type="text" name="totp_code" id="totp_code" maxlength="6" placeholder="000000"
+                autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" autofocus class="totp-input">
             <span class="form-hint">Enter the current 6-digit code from your authenticator app.</span>
         </div>
 
-        <div class="form-toggle-wrap" style="text-align: center; margin: 15px 0;">
-            <span style="color: var(--text-muted); font-size: 0.9em;">Can't access your app?</span>
-        </div>
+        <div style="text-align: center; font-size:12px; color: rgba(255,255,255,0.40); margin: 4px 0;">— or —</div>
 
         <div class="form-group">
             <label for="recovery_code">Recovery Code</label>
             <input type="text" name="recovery_code" id="recovery_code" maxlength="9" placeholder="ABCD-1234"
                 autocomplete="one-time-code" pattern="[A-Za-z0-9]{4}-[A-Za-z0-9]{4}">
-            <span class="form-hint">Use one of your saved one-time recovery codes if you lost your authenticator.</span>
+            <span class="form-hint">Use a one-time recovery code if you lost your authenticator.</span>
         </div>
-        <div class="form-group checkbox-group">
-            <label for="remember_device" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" name="remember_device" id="remember_device" checked>
+
+        <div class="form-group" style="flex-direction:row; align-items:center; gap:8px;">
+            <input type="checkbox" name="remember_device" id="remember_device" checked
+                style="width:16px;height:16px;cursor:pointer;">
+            <label for="remember_device"
+                style="font-size:13px; color:rgba(255,255,255,0.65); cursor:pointer; text-transform:none; letter-spacing:0;">
                 Remember this device for 30 days
             </label>
         </div>
-        <button type="submit" class="btn btn-primary btn-full">Verify and Sign In</button>
+
+        <button type="submit" class="btn btn-primary btn-full">Verify &amp; Sign In</button>
     </form>
 
     <div class="auth-footer">

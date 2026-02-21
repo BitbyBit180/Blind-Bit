@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Login{% endblock %}
+{% block title %}Sign In{% endblock %}
 
 {% block auth_content %}
 <div class="auth-card">
     <div class="auth-header">
-        <div class="auth-logo">??</div>
+        <div class="auth-logo">🔐</div>
         <h1>BlindBit</h1>
         <p class="auth-subtitle">Sign in to your encrypted workspace</p>
     </div>
 
     <p class="auth-flow-note">
-        If you have 2FA enabled, you will be prompted for your code on the next step.
+        If you have 2FA enabled, you will be prompted for your TOTP code on the next step.
     </p>
 
     <form method="post" class="auth-form">
@@ -19,17 +19,17 @@
         <div class="form-group">
             <label for="username">Username</label>
             <input type="text" name="username" id="username" required autofocus value="{{ username|default:'' }}"
-                placeholder="Enter username">
+                placeholder="Enter your username">
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" name="password" id="password" required placeholder="Enter password">
+            <input type="password" name="password" id="password" required placeholder="Enter your password">
         </div>
-        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:4px;">Sign In</button>
 
-        <div style="margin-top: 12px; text-align: center;">
-            <p style="color: var(--text-muted); margin-bottom: 8px; font-size: 0.9em;">Don't have an account?</p>
-            <a href="{% url 'register' %}" class="btn btn-ghost btn-full">Register Now</a>
+        <div style="margin-top: 14px; text-align: center;">
+            <p style="color: rgba(255,255,255,0.50); margin-bottom: 10px; font-size: 13px;">Don't have an account?</p>
+            <a href="{% url 'register' %}" class="btn btn-ghost btn-full">Create Account</a>
         </div>
     </form>
 </div>

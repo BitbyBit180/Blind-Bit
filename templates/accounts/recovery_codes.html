@@ -3,28 +3,39 @@
 {% block page_title %}Recovery Codes{% endblock %}
 
 {% block content %}
-<div class="twofa-page">
-    <div class="card wide-card">
-        <div class="twofa-header">
-            <div class="auth-logo">KEY</div>
-            <h2>Save These Recovery Codes</h2>
-            <p class="auth-subtitle">Each code works once. Store them offline in a safe place.</p>
+<div style="max-width: 600px; margin: 0 auto;">
+    <div class="card">
+        <div style="text-align: center; margin-bottom: 22px;">
+            <div
+                style="width:56px;height:56px;background:linear-gradient(135deg,var(--error),#F87171);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;">
+                🗝️</div>
+            <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin-bottom:6px;">Save
+                These Recovery Codes</h2>
+            <p style="color:var(--text-dim);font-size:14px;">Each code can only be used once. Store them offline in a
+                safe place.</p>
         </div>
-        <div class="security-note">
-            <div class="note-icon">!</div>
+
+        <div class="security-note" style="margin-bottom: 20px;">
+            <div class="note-icon">⚠️</div>
             <div>
-                <strong>Important:</strong> These codes will not be shown again.
-                Use one code only if you lose your authenticator app.
+                <strong>These codes will not be shown again.</strong>
+                Use one only if you lose access to your authenticator app.
             </div>
         </div>
-        <div class="secret-display" style="margin: 1rem 0;">
+
+        <div class="recovery-codes-grid">
             {% for code in codes %}
-            <div class="secret-code" style="margin-bottom:8px;">{{ code }}</div>
+            <div class="recovery-code">{{ code }}</div>
             {% endfor %}
         </div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-ghost" onclick="window.print()">Print Codes</button>
-            <a href="{% url 'dashboard' %}" class="btn btn-primary">I Have Saved Them</a>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:24px;">
+            <button type="button" class="btn btn-ghost" onclick="window.print()">
+                🖨 Print Codes
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                I Have Saved Them →
+            </a>
         </div>
     </div>
 </div>

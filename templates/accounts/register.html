@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
-{% block title %}Register{% endblock %}
+{% block title %}Create Account{% endblock %}
 
 {% block auth_content %}
 <div class="auth-card">
     <div class="auth-header">
         <div class="auth-logo">🔐</div>
         <h1>Create Account</h1>
-        <p class="auth-subtitle">Your data, your keys</p>
+        <p class="auth-subtitle">Your data, your keys — zero trust</p>
     </div>
     <form method="post" class="auth-form">
         {% csrf_token %}
@@ -20,13 +20,14 @@
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" name="password" id="password" required minlength="10" placeholder="Min 10 characters">
+            <input type="password" name="password" id="password" required minlength="10"
+                placeholder="Min 10 characters">
         </div>
         <div class="form-group">
             <label for="password2">Confirm Password</label>
-            <input type="password" name="password2" id="password2" required placeholder="Confirm password">
+            <input type="password" name="password2" id="password2" required placeholder="Confirm your password">
         </div>
-        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:4px;">Create Account</button>
     </form>
     <div class="auth-footer">
         <p>Already have an account? <a href="{% url 'login' %}">Sign In</a></p>

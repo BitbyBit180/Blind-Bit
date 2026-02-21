@@ -5,17 +5,24 @@
 
 {% block top_actions %}
 <label for="file-upload" class="btn btn-primary" style="cursor:pointer">
-    ⬆ Upload File
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+    Upload File
 </label>
 <input type="file" id="file-upload" accept=".pdf,.txt" style="display:none" onchange="uploadFile(this)">
 {% endblock %}
 
 {% block content %}
 <!-- Upload Progress -->
-<div id="upload-status" class="upload-status" style="display:none">
-    <div class="upload-progress">
+<div id="upload-status" class="card"
+    style="display:none;background:var(--orange-soft);border-color:var(--border-warm);">
+    <div style="display:flex;align-items:center;gap:12px;">
         <div class="spinner"></div>
-        <span id="upload-msg">Encrypting & indexing...</span>
+        <span id="upload-msg" style="color:var(--orange-dark);font-weight:500;">Encrypting &amp; indexing...</span>
     </div>
 </div>
 
@@ -36,32 +43,37 @@
                 }}</span>
         </div>
         <div class="file-actions">
-            <a href="{% url 'download_file' f.file_id %}" class="btn btn-sm btn-success">Download</a>
-            <button class="btn btn-sm btn-danger" onclick="deleteFile('{{ f.file_id }}')">Delete</button>
+            <a href="{% url 'download_file' f.file_id %}" class="btn btn-sm btn-ghost-orange">Download</a>
+            <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);"
+                onclick="deleteFile('{{ f.file_id }}')">Delete</button>
         </div>
     </div>
     {% empty %}
-    <div class="empty-state">
-        <div class="empty-icon">📂</div>
-        <h3>No files yet</h3>
-        <p>Upload a PDF or TXT file to get started</p>
+    <div class="empty-state" style="grid-column:1/-1;">
+        <span class="empty-icon">📂</span>
+        <div class="empty-title">No files yet</div>
+        <p class="empty-desc">Upload a PDF or TXT file to get started with encrypted storage</p>
+        <label for="file-upload" class="btn btn-orange" style="cursor:pointer">Upload Your First File</label>
     </div>
     {% endfor %}
 </div>
 
 {% if records %}
-<h2 class="section-title">Records</h2>
+<h2 class="section-title">Encrypted Records</h2>
 <div class="files-grid">
     {% for r in records %}
-    <div class="file-card record-card" id="rec-{{ r.record_id }}">
-        <div class="file-icon">{{ r.record_type|upper|truncatechars:2 }}</div>
+    <div class="file-card" id="rec-{{ r.record_id }}">
+        <div class="file-icon"
+            style="font-size:20px;background:var(--indigo-soft);border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--indigo-dark);font-weight:700;">
+            {{ r.record_type|upper|truncatechars:2 }}</div>
         <div class="file-info">
             <span class="file-name">{{ r.record_type|upper }} Record</span>
             <span class="file-meta">{{ r.uploaded_at|date:"M d, H:i" }} · {{ r.record_id|truncatechars:16 }}</span>
         </div>
         <div class="file-actions">
-            <button class="btn btn-sm btn-accent" onclick="viewRecord('{{ r.record_id }}')">View</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteRecord('{{ r.record_id }}')">Delete</button>
+            <button class="btn btn-sm btn-ghost-orange" onclick="viewRecord('{{ r.record_id }}')">View</button>
+            <button class="btn btn-sm btn-ghost" style="border-color:var(--error);color:var(--error);"
+                onclick="deleteRecord('{{ r.record_id }}')">Delete</button>
         </div>
     </div>
     {% endfor %}
@@ -69,13 +81,17 @@
 {% endif %}
 
 <!-- Record Viewer Modal -->
-<div id="record-modal" class="modal" style="display:none">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Record Viewer</h3>
-            <button class="modal-close" onclick="closeModal()">&times;</button>
+<div id="record-modal" class="modal"
+    style="display:none;position:fixed;inset:0;z-index:100;background:rgba(26,22,18,0.5);display:none;align-items:center;justify-content:center;padding:20px;">
+    <div class="modal-content"
+        style="background:var(--bg2);border-radius:var(--radius);padding:28px;max-width:600px;width:100%;box-shadow:var(--shadow-lg);border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;">Record Viewer</h3>
+            <button onclick="closeModal()"
+                style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-dim);">&times;</button>
         </div>
-        <pre id="record-content" class="code-block"></pre>
+        <pre id="record-content"
+            style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;overflow:auto;max-height:400px;color:var(--text);white-space:pre-wrap;"></pre>
     </div>
 </div>
 {% endblock %}

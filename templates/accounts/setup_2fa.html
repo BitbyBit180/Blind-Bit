@@ -4,59 +4,70 @@
 {% block page_title %}Two-Factor Authentication{% endblock %}
 
 {% block content %}
-<div class="twofa-page">
-    <div class="card wide-card">
-        <div class="twofa-header">
-            <div class="auth-logo">2FA</div>
-            <h2>Setup Two-Factor Authentication</h2>
-            <p class="auth-subtitle">2FA is <strong>mandatory</strong> and your TOTP secret is used to derive encryption keys.<br>
-                Without it, your encrypted data <strong>cannot be decrypted</strong>.</p>
+<div style="max-width: 640px; margin: 0 auto;">
+    <div class="card">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <div
+                style="width:56px;height:56px;background:linear-gradient(135deg,var(--orange),var(--amber));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;box-shadow:0 4px 16px rgba(249,115,22,0.35);">
+                🔑</div>
+            <h2 style="font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin-bottom:6px;">Setup
+                Two-Factor Authentication</h2>
+            <p style="color:var(--text-dim);font-size:14px;line-height:1.6;">2FA is <strong>mandatory</strong> — your
+                TOTP secret is used to derive encryption keys.<br>Without it, your encrypted data <strong>cannot be
+                    decrypted</strong>.</p>
         </div>
+
         {% if is_reenroll %}
-        <div class="security-note">
-            <div class="note-icon">!</div>
+        <div class="security-note" style="margin-bottom:20px;">
+            <div class="note-icon">⚠️</div>
             <div>
                 <strong>Recovery mode:</strong> You signed in with a recovery code.
                 Reconnect your authenticator app now, then verify below.
             </div>
         </div>
         {% endif %}
+
         <div class="twofa-setup">
-            <div class="qr-section">
-                <p class="step-label">Step 1: Scan this QR code with your authenticator app</p>
+            <div style="margin-bottom: 24px;">
+                <p class="step-label">Step 1 — Scan this QR code with your authenticator app</p>
                 <div class="qr-wrapper">
                     <img src="data:image/png;base64,{{ qr_code }}" alt="2FA QR Code" class="qr-image">
                 </div>
                 <div class="secret-display">
                     <p class="step-label">Or enter this secret manually:</p>
                     <div class="secret-code" id="secret-code">{{ secret }}</div>
-                    <button type="button" class="btn btn-ghost btn-sm"
-                        onclick="navigator.clipboard.writeText('{{ secret }}'); this.textContent='Copied!'">
-                        Copy Secret
-                    </button>
-                    <form method="post" style="margin-top:12px;">
-                        {% csrf_token %}
-                        <input type="hidden" name="regenerate_secret" value="1">
-                        <button type="submit" class="btn btn-ghost btn-sm">Generate New Secret</button>
-                    </form>
+                    <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-ghost btn-sm"
+                            onclick="navigator.clipboard.writeText('{{ secret }}'); this.textContent='✓ Copied!'">
+                            Copy Secret
+                        </button>
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="regenerate_secret" value="1">
+                            <button type="submit" class="btn btn-ghost btn-sm">Generate New Secret</button>
+                        </form>
+                    </div>
                 </div>
             </div>
+
             <div class="verify-section">
-                <p class="step-label">Step 2: Enter the 6-digit code to verify</p>
-                <form method="post" class="auth-form">
+                <p class="step-label">Step 2 — Enter the 6-digit code to verify</p>
+                <form method="post" class="auth-form" style="max-width:280px;margin:0 auto;">
                     {% csrf_token %}
                     <div class="form-group">
                         <input type="text" name="totp_code" maxlength="6" required autofocus placeholder="000000"
-                            autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" class="totp-input">
+                            autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" class="totp-input"
+                            style="text-align:center;letter-spacing:8px;padding:12px;">
                     </div>
-                    <button type="submit" class="btn btn-primary btn-full">Verify 2FA</button>
+                    <button type="submit" class="btn btn-primary btn-full">Verify &amp; Enable 2FA</button>
                 </form>
             </div>
-            <div class="security-note">
-                <div class="note-icon">!</div>
+
+            <div class="security-note" style="margin-top:24px;">
+                <div class="note-icon">⚠️</div>
                 <div>
                     <strong>Important:</strong> Save recovery codes after verification.
-                    If your authenticator app is lost, recovery codes are the backup sign-in path.
+                    If your authenticator app is lost, recovery codes are the only backup sign-in path.
                 </div>
             </div>
         </div>
