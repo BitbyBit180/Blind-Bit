@@ -111,8 +111,21 @@ ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
+SOCIALACCOUNT_PROVIDERS = {}
+
+GOOGLE_OAUTH_AVAILABLE = False
+GOOGLE_OAUTH_CONFIGURED = bool(config('GOOGLE_CLIENT_ID', default='').strip())
+GOOGLE_OAUTH_ENABLED = False
+try:
+    import requests  # noqa: F401
+    import jwt  # noqa: F401
+except Exception:
+    GOOGLE_OAUTH_AVAILABLE = False
+else:
+    INSTALLED_APPS.append('allauth.socialaccount.providers.google')
+    GOOGLE_OAUTH_AVAILABLE = True
+    GOOGLE_OAUTH_ENABLED = GOOGLE_OAUTH_CONFIGURED
+    SOCIALACCOUNT_PROVIDERS['google'] = {
         'APP': {
             'client_id': config('GOOGLE_CLIENT_ID', default=''),
             'secret': config('GOOGLE_CLIENT_SECRET', default=''),
@@ -121,19 +134,6 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {'access_type': 'online'},
     }
-}
-
-GOOGLE_OAUTH_AVAILABLE = False
-GOOGLE_OAUTH_CONFIGURED = bool(config('GOOGLE_CLIENT_ID', default='').strip())
-GOOGLE_OAUTH_ENABLED = False
-try:
-    import requests  # noqa: F401
-except Exception:
-    GOOGLE_OAUTH_AVAILABLE = False
-else:
-    INSTALLED_APPS.append('allauth.socialaccount.providers.google')
-    GOOGLE_OAUTH_AVAILABLE = True
-    GOOGLE_OAUTH_ENABLED = GOOGLE_OAUTH_CONFIGURED
 
 # --- SSE storage directory ---
 SSE_STORAGE_DIR = BASE_DIR / 'storage'
