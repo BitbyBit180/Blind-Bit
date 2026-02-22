@@ -78,8 +78,7 @@
             {{ r.record_type|upper|truncatechars:2 }}</div>
         <div class="file-details" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
             <div class="file-header" style="display: flex; flex-direction: column; gap: 4px;">
-                <span class="file-name" style="margin: 0; white-space: normal; word-break: break-all;">{{
-                    r.record_type|upper }} Record</span>
+                <span class="file-name" style="margin: 0; white-space: normal; word-break: break-all;">{{ r.record_type|upper }} Record</span>
                 <span class="file-meta" style="margin: 0;">{{ r.uploaded_at|date:"M d, H:i" }} &middot; {{ r.record_id|truncatechars:16 }}</span>
             </div>
             <div class="file-actions" style="justify-content: flex-start;">
