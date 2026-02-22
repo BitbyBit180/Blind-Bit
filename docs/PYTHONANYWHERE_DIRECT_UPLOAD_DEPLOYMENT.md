@@ -145,6 +145,13 @@ Then click `Reload` in the `Web` tab.
 - `ModuleNotFoundError`: virtualenv path is wrong in `Web` tab.
 - 500 error on startup: verify WSGI path and `DJANGO_SETTINGS_MODULE`.
 - Permissions errors on SQLite/media/storage: keep project under `/home/<your-username>/...` and ensure directories exist.
+- `redirect_uri_mismatch` for Google login:
+  - In Google Cloud Console OAuth client, add the exact callback URI:
+    - `https://<your-username>.pythonanywhere.com/accounts/google/login/callback/`
+  - Ensure it is `https` (not `http`) and keep trailing slash.
+- `DEBUG` not changing behavior:
+  - This project reads `DJANGO_DEBUG`, not `DEBUG`.
+  - Use `DJANGO_DEBUG=False` in `.env`.
 
 ## 13. Optional Hardening
 
