@@ -72,6 +72,10 @@ pip install -r requirements.txt
 python -c "import nltk; nltk.download('stopwords')"
 ```
 
+## Deployment
+
+- PythonAnywhere (direct upload, no GitHub): `docs/PYTHONANYWHERE_DIRECT_UPLOAD_DEPLOYMENT.md`
+
 ## Usage
 
 ### Interactive CLI
